@@ -10,7 +10,8 @@ setup(
     packages=['cs229'],
     install_requires=[
         'scipy',
-        'numpy'
+        'numpy',
+        'tqdm'
     ],
     include_package_data=True,
     zip_safe=False,
