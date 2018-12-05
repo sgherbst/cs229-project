@@ -24,12 +24,15 @@ def project(a, b, c):
 
 class Annotation:
     def __init__(self, f):
+        # save path to JSON file
+        self.json_path = f
+
         # initialize labels
         self.init_labels()
 
         # parse the JSON file
         data = json.load(open(f, 'r'))
-        self.image_path = data['imagePath']
+        self.image_path = os.path.join(os.path.dirname(self.json_path), data['imagePath'])
 
         # loop through all points
         for shape in data['shapes']:
@@ -44,13 +47,16 @@ class Annotation:
         self.sanity_check()
 
     def init_labels(self):
-        self.labels = defaultdict(lambda: [])
+        self.labels = {}
 
     def count(self, label):
-        return len(self.labels[label])
+        return len(self.get(label)) if self.has(label) else 0
 
     def get(self, label):
         return self.labels[label]
+
+    def has(self, label):
+        return label in self.labels
 
     def check_features(self, **kwargs):
         for key, val in kwargs.items():
@@ -59,7 +65,7 @@ class Annotation:
         return True
 
     def add_labeled_point(self, label, point):
-        if label not in self.labels:
+        if not self.has(label):
             self.labels[label] = []
 
         self.labels[label].append(point)
@@ -106,7 +112,7 @@ def main():
     folder = os.path.join(top_dir(), 'images', '12-04_17-54-43')
 
     for f in glob(os.path.join(folder, '*.json')):
-        Annotation(f)
+        print(Annotation(f).image_path)
 
 if __name__ == '__main__':
     main()

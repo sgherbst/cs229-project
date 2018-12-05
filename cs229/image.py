@@ -16,7 +16,7 @@ def circle_to_mask(roi_circle):
     return mask
 
 def img_to_mask(img):
-    rows, cols = img.shape
+    rows, cols = img.shape[0], img.shape[1]
 
     # sanity checks
     assert rows==cols
