@@ -109,10 +109,13 @@ class Annotation:
         print('{}: {}'.format(self.image_path, msg))
 
 def main():
-    folder = os.path.join(top_dir(), 'images', '12-04_17-54-43')
+    folders = []
+    folders.append(os.path.join(top_dir(), 'images', '12-04_17-54-43'))
+    folders.append(os.path.join(top_dir(), 'images', '12-05-12-43-00'))
 
-    for f in glob(os.path.join(folder, '*.json')):
-        print(Annotation(f).image_path)
+    for folder in folders:
+        for f in glob(os.path.join(folder, '*.json')):
+            Annotation(f).image_path
 
 if __name__ == '__main__':
     main()
