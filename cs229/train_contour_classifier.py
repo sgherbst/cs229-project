@@ -15,10 +15,36 @@ from cs229.annotation import Annotation
 from cs229.full_img import FullImage
 from cs229.image import img_to_mask
 
-CATEGORIES = ['none', 'male', 'female', 'both']
+CATEGORIES = ['neither', 'male', 'female', 'both']
 
 def in_contour(pt, contour):
     return cv2.pointPolygonTest(contour, tuple(pt), False) > 0
+
+def contour_to_features(contour):
+    return [cv2.contourArea(contour)]
+
+def contour_label(anno, contour):
+    contains_m = in_contour(anno.get('mp')[0], contour)
+    contains_f = in_contour(anno.get('fp')[0], contour)
+
+    if contains_m:
+        if contains_f:
+            return 'both'
+        else:
+            if anno.has('ma') and anno.has('mh'):
+                return 'male'
+            else:
+                # bad image; skip
+                return None
+    else:
+        if contains_f:
+            if anno.has('fa') and anno.has('fh'):
+                return 'female'
+            else:
+                # bad image; skip
+                pass
+        else:
+            return 'neither'
 
 def load_data():
     folders = ['12-04_17-54-43', '12-05-12-43-00']
@@ -37,46 +63,16 @@ def load_data():
         mask = img_to_mask(img)
         full_image = FullImage(img, mask=mask)
 
-        mp = anno.get('mp')[0]
-        fp = anno.get('fp')[0]
-
         for contour in full_image.contours:
-            contains_f = in_contour(fp, contour)
-            contains_m = in_contour(mp, contour)
-
-            if contains_m:
-                if contains_f:
-                    X.append(contour)
-                    y.append('both')
-                else:
-                    # add if this is a good image of a male fly
-                    if anno.has('ma') and anno.has('mh'):
-                        X.append(contour)
-                        y.append('male')
-                    else:
-                        # bad image; skip
-                        pass
-            else:
-                if contains_f:
-                    # add if this is a good image of a female fly
-                    if anno.has('fa') and anno.has('fh'):
-                        X.append(contour)
-                        y.append('female')
-                    else:
-                        # bad image; skip
-                        pass
-                else:
-                    # discard case where there is not fly
-                    X.append(contour)
-                    y.append('none')
+            label = contour_label(anno, contour)
+            if label is not None:
+                X.append(contour_to_features(contour))
+                y.append(CATEGORIES.index(label))
 
     # assemble features
-    X = [cv2.contourArea(contour) for contour in X]
     X = np.array(X).astype(float)
-    X = X.reshape(-1, 1)
 
     # assemble labels
-    y = [CATEGORIES.index(label) for label in y]
     y = np.array(y).astype(int)
 
     return X, y
