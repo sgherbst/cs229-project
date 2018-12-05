@@ -11,7 +11,7 @@ from cs229.image import img_to_mask
 from cs229.util import FpsMon
 
 def main(rate = 0.003, max_count=100):
-    cap, props = open_video('reduced')
+    cap, props = open_video('cropped')
 
     folder = image_folder()
 

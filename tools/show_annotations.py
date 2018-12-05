@@ -12,6 +12,8 @@ from cs229.annotation import Annotation
 from cs229.orb import MyOrb
 
 def get_image(n):
+    print('Getting image {}.'.format(n))
+
     folder = os.path.join(top_dir(), 'images', '12-01_10-41-12')
     img_path = os.path.join(folder, '{}.bmp'.format(n))
     json_path = os.path.join(folder, '{}.json'.format(n))
@@ -55,6 +57,7 @@ def main():
             orb.detect(img, mask=mask)
             mon_detect.tock()
 
+            anno = None
             if anno is not None:
                 kp, _ = orb.split_kp(anno.num_to_lis(get_trackbar('feature')), thresh=get_trackbar('thresh'))
             else:
