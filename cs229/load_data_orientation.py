@@ -2,7 +2,6 @@ import os
 import os.path
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 
 from itertools import chain
 from math import degrees
@@ -15,6 +14,7 @@ from cs229.full_img import FullImage
 from cs229.image import img_to_mask
 from cs229.patch import ImagePatch
 from cs229.train_contour_classifier import contour_label
+import joblib
 
 CATEGORIES = ['normal', 'flipped']
 
@@ -75,8 +75,8 @@ def load_data(tol_radians=0.1):
 
     files = chain(*folders)
 
-    X = []
-    y = []
+    X = {'male': [], 'female': []}
+    y = {'male': [], 'female': []}
 
     hog = make_hog()
 
@@ -88,46 +88,53 @@ def load_data(tol_radians=0.1):
         full_image = FullImage(img, mask=mask)
 
         for contour in full_image.contours:
-            if contour_label(anno, contour) == 'male' and anno.has('ma') and anno.has('mh'):
-                # make patch, which will compute the angle from the image
-                patch = ImagePatch(full_image.img, contour)
+            type = contour_label(anno, contour)
 
-                # compute angle from labels
-                fa = anno.get('ma')[0]
-                fh = anno.get('mh')[0]
-                label_angle = np.arctan2(fa[1] - fh[1], fh[0] - fa[0])
+            if type == 'male' and anno.has('ma') and anno.has('mh'):
+                type = 'male'
+                head = anno.get('mh')[0]
+                abdomen = anno.get('ma')[0]
+            elif type == 'female' and anno.has('fa') and anno.has('fh'):
+                type = 'female'
+                head = anno.get('fh')[0]
+                abdomen = anno.get('fa')[0]
+            else:
+                continue
 
-                # find out if the image is flipped or not
-                diff = abs(angle_diff(patch.orig_angle, label_angle))
-                if diff <= tol_radians:
-                    label = 'normal'
-                elif np.pi-tol_radians <= diff <= np.pi+tol_radians:
-                    label = 'flipped'
-                else:
-                    anno.warn('Could not properly determine whether image is flipped (diff={:0.1f} degrees)'.format(degrees(diff)))
-                    plt.imshow(patch.img)
-                    plt.show()
-                    continue
+            # make patch, which will compute the angle from the image
+            patch = ImagePatch(full_image.img, contour)
 
-                X.append(img_to_features(patch.img, hog))
-                y.append(CATEGORIES.index(label))
+            # compute angle from labels
+            label_angle = np.arctan2(abdomen[1] - head[1], head[0] - abdomen[0])
 
-                X.append(img_to_features(patch.flipped(), hog))
-                y.append(1-CATEGORIES.index(label))
+            # find out if the image is flipped or not
+            diff = abs(angle_diff(patch.orig_angle, label_angle))
+
+            if diff <= tol_radians:
+                label = 'normal'
+            elif np.pi-tol_radians <= diff <= np.pi+tol_radians:
+                label = 'flipped'
+            else:
+                anno.warn('Could not properly determine whether image is flipped (diff={:0.1f} degrees)'.format(degrees(diff)))
+                continue
+
+            # compute the image descriptor
+            X[type] += [img_to_features(patch.img, hog), img_to_features(patch.flipped(), hog)]
+            y[type] += [CATEGORIES.index(label), 1-CATEGORIES.index(label)]
 
     # assemble features
-    X = np.array(X).astype(float)
+    X = {k: np.array(v).astype(float) for k, v in X.items()}
 
     # assemble labels
-    y = np.array(y).astype(int)
+    y = {k: np.array(v).astype(int) for k, v in y.items()}
 
     return X, y
 
 def main():
     X, y = load_data()
 
-    np.save('X_orient', X)
-    np.save('y_orient', y)
+    joblib.dump(X, 'X_orient.joblib')
+    joblib.dump(y, 'y_orient.joblib')
 
 if __name__ == '__main__':
     main()
