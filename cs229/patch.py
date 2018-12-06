@@ -51,7 +51,7 @@ class ImagePatch:
         moments = cv2.moments(patch)
         self.orig_angle = moments_to_angle(moments)
 
-        self.img = imutils.rotate_bound(patch, degrees(self.orig_angle))
+        self.img = imutils.rotate_bound(patch, degrees(self.orig_angle)-90)
 
     def flipped(self):
         return imutils.rotate_bound(self.img, 180)
