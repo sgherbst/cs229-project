@@ -3,9 +3,6 @@ import os.path
 import cv2
 import numpy as np
 
-from sklearn import tree
-from sklearn.metrics import classification_report
-from sklearn.model_selection import train_test_split
 from itertools import chain
 
 from glob import glob
@@ -14,6 +11,8 @@ from cs229.files import top_dir
 from cs229.annotation import Annotation
 from cs229.full_img import FullImage
 from cs229.image import img_to_mask
+
+import joblib
 
 CATEGORIES = ['neither', 'male', 'female', 'both']
 
@@ -80,14 +79,8 @@ def load_data():
 def main():
     X, y = load_data()
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y)
-
-    clf = tree.DecisionTreeClassifier()
-    clf = clf.fit(X_train, y_train)
-
-    y_pred = clf.predict(X_test)
-
-    print(classification_report(y_test, y_pred, target_names=CATEGORIES))
+    joblib.dump(X, 'X_contour.joblib')
+    joblib.dump(y, 'y_contour.joblib')
 
 if __name__ == '__main__':
     main()

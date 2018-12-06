@@ -6,3 +6,5 @@ test/*.p
 .DS_Store
 .idea
 __pycache__
+*.joblib
+*.dot
