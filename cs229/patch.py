@@ -16,20 +16,20 @@ def crop_to_contour(img, contour):
     cv2.drawContours(mask, [contour], 0, (255, 255, 255), -1)
 
     # get bounding box coordinates
-    xmin = np.min(contour[:, 0, 1])
-    xmax = np.max(contour[:, 0, 1])
-    ymin = np.min(contour[:, 0, 0])
-    ymax = np.max(contour[:, 0, 0])
+    ymin = np.min(contour[:, 0, 1])
+    ymax = np.max(contour[:, 0, 1])
+    xmin = np.min(contour[:, 0, 0])
+    xmax = np.max(contour[:, 0, 0])
 
     # crop to window
-    window = (slice(xmin, xmax+1), slice(ymin, ymax+1))
+    window = (slice(ymin, ymax+1), slice(xmin, xmax+1))
     img = img[window]
     mask = mask[window]
 
     # apply mask
     img = cv2.bitwise_and(img, img, mask=mask)
 
-    return ImagePatch(img=img, mask=mask)
+    return ImagePatch(img=img, mask=mask, ulx=xmin, uly=ymin)
 
 def moments_to_angle(moments):
     angle = 0.5 * np.arctan(2 * moments['mu11'] / (moments['mu20'] - moments['mu02']))
@@ -48,9 +48,12 @@ def moments_to_center(moments):
     return x_bar, y_bar
 
 class ImagePatch:
-    def __init__(self, img, mask):
+    def __init__(self, img, mask, ulx=0, uly=0):
         self.img = img
         self.mask = mask
+        self.ulx = ulx
+        self.uly = uly
+
         self._moments = None
 
     # memoized image moments
