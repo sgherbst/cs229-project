@@ -16,7 +16,7 @@ class ContourPredictor:
         self.clf = joblib.load(os.path.join(top_dir(), 'cs229', CLF_JOBLIB_NAME))
 
     def predict(self, contour):
-        features = np.array([contour_to_features(contour)]).astype(float)
+        features = contour_to_features(contour).reshape(1, -1)
         label = self.clf.predict(features)[0]
         return CATEGORIES[label]
 

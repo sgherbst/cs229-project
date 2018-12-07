@@ -128,10 +128,10 @@ def load_data(tol_radians=0.1, augment_number=10):
                 y[type].append(CATEGORIES.index(label_aug))
 
     # assemble features
-    X = {k: np.array(v).astype(float) for k, v in X.items()}
+    X = {k: np.array(v, dtype=float) for k, v in X.items()}
 
     # assemble labels
-    y = {k: np.array(v).astype(int) for k, v in y.items()}
+    y = {k: np.array(v, dtype=int) for k, v in y.items()}
 
     return X, y
 

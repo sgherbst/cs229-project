@@ -20,7 +20,7 @@ def in_contour(pt, contour):
     return cv2.pointPolygonTest(contour, tuple(pt), False) > 0
 
 def contour_to_features(contour):
-    return [cv2.contourArea(contour)]
+    return np.array([cv2.contourArea(contour)], dtype=float)
 
 def contour_label(anno, contour):
     contains_m = in_contour(anno.get('mp')[0], contour)
@@ -69,10 +69,10 @@ def load_data():
                 y.append(CATEGORIES.index(label))
 
     # assemble features
-    X = np.array(X).astype(float)
+    X = np.array(X, dtype=float)
 
     # assemble labels
-    y = np.array(y).astype(int)
+    y = np.array(y, dtype=int)
 
     return X, y
 
