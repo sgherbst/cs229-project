@@ -28,7 +28,7 @@ def plot_pca(clf, X, y):
 def train(X, y, plot=True, dump=True, report=True):
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
-    clf = make_pipeline(StandardScaler(), PCA(n_components=2), LogisticRegression())
+    clf = make_pipeline(StandardScaler(), PCA(n_components=3), LogisticRegression())
 
     clf.fit(X_train, y_train)
 

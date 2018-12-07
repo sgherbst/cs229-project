@@ -2,6 +2,7 @@ import os
 import os.path
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 from itertools import chain
 from math import degrees
@@ -12,8 +13,8 @@ from cs229.files import top_dir
 from cs229.annotation import Annotation
 from cs229.full_img import FullImage
 from cs229.image import img_to_mask
-from cs229.patch import ImagePatch
-from cs229.train_contour_classifier import contour_label
+from cs229.patch import crop_to_contour
+from cs229.load_data_contour import contour_label
 import joblib
 
 CATEGORIES = ['normal', 'flipped']
@@ -22,32 +23,12 @@ def angle_diff(a, b):
     # https://stackoverflow.com/questions/1878907/the-smallest-difference-between-2-angles
     return ((a-b) + np.pi) % (2*np.pi) - np.pi
 
-def hog_patch(img, width=128, height=256, downsamp=2):
-    # compute moments
-    M = cv2.moments(img)
+def make_hog_patch(patch):
+    patch = patch.orient('vertical')
+    patch = patch.recenter(new_width=128, new_height=256)
+    patch = patch.downsample(2)
 
-    # compute center of mass
-    in_cx = int(M['m10']/M['m00'])
-    in_cy = int(M['m01']/M['m00'])
-
-    # compute center of output image
-    out_cx = width//2
-    out_cy = height//2
-
-    # compute limits
-    left = min(width//2, in_cx)
-    right = min((width-1)//2, img.shape[1] - in_cx - 1)
-    up = min(height//2, in_cy)
-    down = min((height-1)//2, img.shape[0] - in_cy - 1)
-
-    # compute output
-    out = np.zeros((height, width), dtype=np.uint8)
-    out[out_cy-up:out_cy+down+1, out_cx-left:out_cx+right+1] = img[in_cy-up:in_cy+down+1, in_cx-left:in_cx+right+1]
-
-    # downsample
-    out = out[::downsamp, ::downsamp]
-
-    return out
+    return patch
 
 def make_hog():
     # winSize = (64, 128)
@@ -62,13 +43,28 @@ def make_hog():
 
     return hog
 
-def img_to_features(img, hog):
-    patch = hog_patch(img)
-    descriptor = hog.compute(patch).flatten()
+def patch_to_features(hog_patch, hog):
+    return hog.compute(hog_patch.img).flatten()
 
-    return descriptor
+def augment_data(hog_patch, label, pos_noise=3, angle_noise=0.05, pixel_noise=3):
+    # flip image with 50% probability
+    if np.random.rand() < 0.5:
+        hog_patch = hog_patch.rotate180()
+        label = CATEGORIES[1-CATEGORIES.index(label)]
 
-def load_data(tol_radians=0.1):
+    # add some angular noise
+    hog_patch = hog_patch.rotate(np.random.uniform(-angle_noise, +angle_noise), bound=False)
+
+    # add some translational noise
+    hog_patch = hog_patch.translate(np.random.uniform(-pos_noise, +pos_noise),
+                                    np.random.uniform(-pos_noise, +pos_noise))
+
+    # add some pixel noise
+    hog_patch = hog_patch.add_noise(pixel_noise)
+
+    return hog_patch, label
+
+def load_data(tol_radians=0.1, augment_number=10):
     folders = ['12-04_17-54-43', '12-05-12-43-00']
     folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
     folders = [glob(os.path.join(folder, '*.json')) for folder in folders]
@@ -102,13 +98,13 @@ def load_data(tol_radians=0.1):
                 continue
 
             # make patch, which will compute the angle from the image
-            patch = ImagePatch(full_image.img, contour)
+            patch = crop_to_contour(full_image.img, contour)
 
             # compute angle from labels
             label_angle = np.arctan2(abdomen[1] - head[1], head[0] - abdomen[0])
 
             # find out if the image is flipped or not
-            diff = abs(angle_diff(patch.orig_angle, label_angle))
+            diff = abs(angle_diff(patch.estimate_angle(), label_angle))
 
             if diff <= tol_radians:
                 label = 'normal'
@@ -118,9 +114,18 @@ def load_data(tol_radians=0.1):
                 anno.warn('Could not properly determine whether image is flipped (diff={:0.1f} degrees)'.format(degrees(diff)))
                 continue
 
-            # compute the image descriptor
-            X[type] += [img_to_features(patch.img, hog), img_to_features(patch.flipped(), hog)]
-            y[type] += [CATEGORIES.index(label), 1-CATEGORIES.index(label)]
+            # orient patch vertically
+            hog_patch = make_hog_patch(patch)
+
+            # add original data
+            X[type].append(patch_to_features(hog_patch, hog))
+            y[type].append(CATEGORIES.index(label))
+
+            # augment data with reflections, rotations, noise, translation
+            for _ in range(augment_number):
+                hog_patch_aug, label_aug = augment_data(hog_patch, label)
+                X[type].append(patch_to_features(hog_patch_aug, hog))
+                y[type].append(CATEGORIES.index(label_aug))
 
     # assemble features
     X = {k: np.array(v).astype(float) for k, v in X.items()}

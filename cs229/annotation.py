@@ -1,5 +1,4 @@
 import json
-from collections import defaultdict
 import numpy as np
 from glob import glob
 import os
