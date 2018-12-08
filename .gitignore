@@ -8,3 +8,5 @@ test/*.p
 __pycache__
 *.joblib
 *.dot
+*.eps
+*.png

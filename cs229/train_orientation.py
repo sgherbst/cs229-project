@@ -13,6 +13,7 @@ from sklearn.decomposition import PCA
 from cs229.files import top_dir
 from cs229.load_data_orientation import CATEGORIES, make_hog_patch, make_hog, patch_to_features
 from cs229.patch import crop_to_contour
+from cs229.util import train_experiment, report_model
 
 import joblib
 
@@ -48,48 +49,48 @@ class PosePredictor:
         # return result
         return center, angle
 
-def plot_pca(clf, X, y):
-    #scaler = clf.named_steps['standardscaler']
-    pca_std = clf.named_steps['pca']
-
-    #X_t = pca_std.transform(scaler.transform(X))
-    X_t = pca_std.transform(X)
+def plot_pca(clf, X, y, type):
+    X_t = clf.named_steps['pca'].transform(X)
 
     for l, c, m in zip(range(2), ('blue', 'red'), ('o', 'x')):
-        plt.scatter(X_t[y == l, 0], X_t[y == l, 1], color=c, label='class %s' % l, alpha=0.5, marker=m)
+        plt.scatter(X_t[y == l, 0], X_t[y == l, 1], color=c, label=CATEGORIES[l], alpha=0.5, marker=m)
 
+    plt.title('PCA for Orientation Features ({} fly)')
     plt.legend(loc='upper right')
-
+    plt.xlabel('PCA 1')
+    plt.ylabel('PCA 2')
     plt.grid()
-    plt.show()
 
-def train(X, y, type, plot=True, dump=True, report=True):
+    plt.savefig('pca_orient_{}.eps'.format(type), bbox_inches='tight')
+
+def train(X, y, type, plot=False):
     X_train, X_test, y_train, y_test = train_test_split(X[type], y[type])
 
-    #clf = make_pipeline(StandardScaler(), PCA(n_components=3), LogisticRegression())
-    clf = make_pipeline(PCA(n_components=3), LogisticRegression())
+    clf = make_pipeline(PCA(n_components=3), LogisticRegression(solver='lbfgs'))
 
     clf.fit(X_train, y_train)
 
     if plot:
-        plot_pca(clf, X_train, y_train)
+        plot_pca(clf, X_train, y_train, type)
 
-    if report:
-        y_pred = clf.predict(X_test)
-        print(classification_report(y_test, y_pred, target_names=CATEGORIES))
+    y_pred = clf.predict(X_test)
 
-    if dump:
-        joblib.dump(clf, clf_joblib_name(type))
+    return clf, y_test, y_pred
+
+def train_once(X, y, type):
+    clf, y_test, y_pred = train(X, y, type, plot=True)
+    report_model(y_test, y_pred, CATEGORIES)
+
+    joblib.dump(clf, clf_joblib_name(type))
 
 def main():
     X = joblib.load('X_orient.joblib')
     y = joblib.load('y_orient.joblib')
 
-    print('Training orientation detector for male fly...')
-    train(X, y, 'male')
-
-    print('Training orientation detector for female fly...')
-    train(X, y, 'female')
+    for type in ['male', 'female']:
+        print('{} fly orientation detector...'.format(type.capitalize()))
+        train_once(X, y, type)
+        #train_experiment(lambda: train(X, y, type), CATEGORIES)
 
 if __name__ == '__main__':
     main()

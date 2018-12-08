@@ -17,55 +17,24 @@ from cs229.patch import crop_to_contour
 import joblib
 
 CATEGORIES = ['mf', 'fm']
-FEATURES = ['area_1', 'area_2', 'area_diff', 'dist_1', 'dist_2', 'ecc_1', 'ecc_2', 'wall_angle_1',
-            'wall_angle_2']
 X_JOBLIB_NAME = 'X_id.joblib'
 Y_JOBLIB_NAME = 'y_id.joblib'
 
-def wall_angle(cx_img, cy_img, cx_fly, cy_fly, angle_fly):
-    angle_wall = np.arctan((cy_img-cy_fly)/(cx_fly-cx_img))
-    rel_angle_fly = (angle_fly - angle_wall) % np.pi
-
-    if rel_angle_fly < np.pi/2:
-        return np.pi/2 - rel_angle_fly
-    else:
-        return rel_angle_fly - np.pi/2
-
-def make_features(contour_1, contour_2, patch_1, patch_2, img):
-    # create distance features
-    cx_img = img.shape[1] // 2
-    cy_img = img.shape[0] // 2
-
-    cx_1, cy_1 = patch_1.estimate_center(absolute=True)
-    cx_2, cy_2 = patch_2.estimate_center(absolute=True)
-
-    dist_1 = np.hypot(cx_1-cx_img, cy_1-cy_img)
-    dist_2 = np.hypot(cx_2-cx_img, cy_2-cy_img)
-
-    # create eccentricity features
-    ecc_1 = patch_1.estimate_eccentricity()
-    ecc_2 = patch_2.estimate_eccentricity()
-
+def make_features(contour_1, contour_2, patch_1, patch_2):
     # create area features
     area_1 = cv2.contourArea(contour_1)
     area_2 = cv2.contourArea(contour_2)
-    area_diff = area_1 - area_2
 
-    # create angle features
-    wall_angle_1 = wall_angle(cx_img, cy_img, cx_1, cy_1, patch_1.estimate_angle())
-    wall_angle_2 = wall_angle(cx_img, cy_img, cx_2, cy_2, patch_2.estimate_angle())
+    # create eccentricity features
+    aspect_1 = patch_1.estimate_aspect_ratio()
+    aspect_2 = patch_2.estimate_aspect_ratio()
 
     # build feature vector
     features = []
     features.append(area_1)
     features.append(area_2)
-    #features.append(area_diff)
-    #features.append(dist_1)
-    #features.append(dist_2)
-    features.append(ecc_1)
-    features.append(ecc_2)
-    #features.append(wall_angle_1)
-    #features.append(wall_angle_2)
+    features.append(aspect_1)
+    features.append(aspect_2)
 
     features = np.array(features, dtype=float)
 
@@ -73,7 +42,6 @@ def make_features(contour_1, contour_2, patch_1, patch_2, img):
 
 def load_data():
     folders = ['12-04_17-54-43', '12-05-12-43-00', '12-07_16_45_00']
-    #folders = ['12-07_16_45_00']
     folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
     folders = [glob(os.path.join(folder, '*.json')) for folder in folders]
 
@@ -115,10 +83,10 @@ def load_data():
             male_patch = crop_to_contour(img, male)
             female_patch = crop_to_contour(img, female)
 
-            X.append(make_features(male, female, male_patch, female_patch, img))
+            X.append(make_features(male, female, male_patch, female_patch))
             y.append(CATEGORIES.index('mf'))
 
-            X.append(make_features(female, male, female_patch, male_patch, img))
+            X.append(make_features(female, male, female_patch, male_patch))
             y.append(CATEGORIES.index('fm'))
 
     # assemble features

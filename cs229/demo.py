@@ -17,9 +17,9 @@ def bound(pt, img):
 
     return (clip(0), clip(1))
 
-def main(arrow_length=40, profile=False):
+def main(profile=False):
     # prepare video
-    cap, props = open_video('cropped')
+    cap, props = open_video('test1')
     _, img = cap.read()
     img = img[:, :, 0]
     mask = img_to_mask(img)
@@ -70,7 +70,7 @@ def main(arrow_length=40, profile=False):
             patch_1 = crop_to_contour(img, contour_1)
             patch_2 = crop_to_contour(img, contour_2)
 
-            label = id_predictor.predict(contour_1, contour_2, patch_1, patch_2, img)
+            label = id_predictor.predict(contour_1, contour_2, patch_1, patch_2)
 
             if label == 'mf':
                 results['male'] = dict(contour=contour_1, patch=patch_1)
@@ -106,8 +106,9 @@ def main(arrow_length=40, profile=False):
             cv2.circle(out, center, 5, colors[label], -1)
 
             # draw arrow in direction of orientation
-            ax = result['cx'] + arrow_length*np.cos(result['angle'])
-            ay = result['cy'] - arrow_length*np.sin(result['angle'])
+            MA, ma = result['patch'].estimate_axes()
+            ax = result['cx'] + 0.3*MA*np.cos(result['angle'])
+            ay = result['cy'] - 0.3*MA*np.sin(result['angle'])
             tip = bound((ax, ay), out)
             cv2.arrowedLine(out, center, tip, colors[label], 5, tipLength=0.3)
 

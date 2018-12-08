@@ -91,24 +91,22 @@ class ImagePatch:
 
         return (x, y)
 
-    def estimate_eigenvalues(self):
-        # https://en.wikipedia.org/wiki/Image_moment
+    def estimate_axes(self):
+        # ref: https://en.wikipedia.org/wiki/Image_moment
+        # ref: http://raphael.candelier.fr/?blog=Image%20Moments
         mu_prime_20 = self.moments['mu20']/self.moments['m00']
         mu_prime_02 = self.moments['mu02']/self.moments['m00']
         mu_prime_11 = self.moments['mu11']/self.moments['m00']
 
-        offset = (mu_prime_20+mu_prime_02)/2
-        delta = np.sqrt(4*(mu_prime_11**2)+(mu_prime_20-mu_prime_02)**2)/2
+        MA = np.sqrt(6*(mu_prime_20+mu_prime_02+np.sqrt(4*(mu_prime_11**2)+(mu_prime_20-mu_prime_02)**2)))
+        ma = np.sqrt(6*(mu_prime_20+mu_prime_02-np.sqrt(4*(mu_prime_11**2)+(mu_prime_20-mu_prime_02)**2)))
 
-        return offset+delta, offset-delta
+        return MA, ma
 
-    def estimate_eccentricity(self):
-        lambda_1, lambda_2 = self.estimate_eigenvalues()
+    def estimate_aspect_ratio(self):
+        MA, ma = self.estimate_axes()
 
-        if (lambda_1 != 0) and ((1 - (lambda_2 / lambda_1)) >= 0):
-            return np.sqrt(1 - (lambda_2 / lambda_1))
-        else:
-            return 0
+        return MA/ma
 
     def orient(self, dir='vertical'):
         rotate_angle = self.estimate_angle()
