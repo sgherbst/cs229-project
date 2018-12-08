@@ -1,60 +1,50 @@
 import cv2
-import numpy as np
-import os.path
-import os
-import pickle
 
-from cs229.files import open_image, open_video
-from cs229.display import open_window, show_square_image, make_trackbar, get_trackbar
-from cs229.image import img_to_mask
-from cs229.util import FpsMon
+from cs229.files import open_video
+from cs229.display import open_window, show_image, make_trackbar, get_trackbar
+from cs229.image import img_to_mask, erode
 
 def main():
-    #img = open_image()
+    # load first frame from video
     cap, props = open_video('test1')
     ok, img = cap.read()
     img = img[:, :, 0]
 
-    img = cv2.resize(img, (512, 512))
-
+    # open the window and show the first image
     open_window()
-    show_square_image(img)
+    show_image(img, downsamp=2)
 
-    make_trackbar('test', 1, 5)
-    make_trackbar('max_thresh', 203, 255)
-    make_trackbar('min_thresh', 0, 255)
-
-    cmask = img_to_mask(img)
-
-    mon = FpsMon()
+    # add trackbars
+    make_trackbar('min', 0, 255)
+    make_trackbar('max', 210, 255)
+    make_trackbar('boundary', 20, 40)
+    make_trackbar('erode', 0, 10)
 
     while True:
-        mon.tick()
-
-        #img = open_image('test{}'.format(get_trackbar('test', min=1)))
+        # read image
         ok, img = cap.read()
         if not ok:
             break
         img = img[:, :, 0]
 
-        img = cv2.resize(img, (512, 512))
+        # generate mask
+        cmask = img_to_mask(img)
+        cmask = erode(cmask, get_trackbar('boundary'))
 
-        fmask = cv2.inRange(img, get_trackbar('min_thresh', min=1), get_trackbar('max_thresh', min=1))
-        print(get_trackbar('max_thresh', min=1))
-        #fmask = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
-        # out = cv2.morphologyEx(out, cv2.MORPH_CLOSE, np.ones((5,5),np.uint8))
-
-        #_, contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+        fmask = cv2.inRange(img, get_trackbar('min'), get_trackbar('max'))
         mask = cv2.bitwise_and(cmask, fmask)
+        if get_trackbar('erode') != 0:
+            mask = erode(mask, get_trackbar('erode'))
+
         out = cv2.bitwise_and(img, img, mask=mask)
 
-        show_square_image(out)
+        print(get_trackbar('max'), get_trackbar('boundary'), get_trackbar('erode'))
+
+        show_image(out, downsamp=2)
+
         key = cv2.waitKey(props.t_ms)
         if key == ord('q'):
             break
-
-    mon.done()
 
 if __name__ == "__main__":
     main()

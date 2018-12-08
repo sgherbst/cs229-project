@@ -111,6 +111,7 @@ def main():
     folders = []
     folders.append(os.path.join(top_dir(), 'images', '12-04_17-54-43'))
     folders.append(os.path.join(top_dir(), 'images', '12-05-12-43-00'))
+    folders.append(os.path.join(top_dir(), 'images', '12-07_16_45_00'))
 
     for folder in folders:
         for f in glob(os.path.join(folder, '*.json')):

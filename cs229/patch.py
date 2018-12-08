@@ -7,7 +7,7 @@ import imutils
 
 from cs229.files import top_dir
 from cs229.image import img_to_mask
-from cs229.full_img import FullImage
+from cs229.contour import find_contours
 from math import degrees
 
 def crop_to_contour(img, contour):
@@ -83,8 +83,32 @@ class ImagePatch:
     def estimate_angle(self):
         return moments_to_angle(self.moments)
 
-    def estimate_center(self):
-        return moments_to_center(self.moments)
+    def estimate_center(self, absolute):
+        x, y = moments_to_center(self.moments)
+
+        if absolute:
+            x, y = x+self.ulx, y+self.uly
+
+        return (x, y)
+
+    def estimate_eigenvalues(self):
+        # https://en.wikipedia.org/wiki/Image_moment
+        mu_prime_20 = self.moments['mu20']/self.moments['m00']
+        mu_prime_02 = self.moments['mu02']/self.moments['m00']
+        mu_prime_11 = self.moments['mu11']/self.moments['m00']
+
+        offset = (mu_prime_20+mu_prime_02)/2
+        delta = np.sqrt(4*(mu_prime_11**2)+(mu_prime_20-mu_prime_02)**2)/2
+
+        return offset+delta, offset-delta
+
+    def estimate_eccentricity(self):
+        lambda_1, lambda_2 = self.estimate_eigenvalues()
+
+        if (lambda_1 != 0) and ((1 - (lambda_2 / lambda_1)) >= 0):
+            return np.sqrt(1 - (lambda_2 / lambda_1))
+        else:
+            return 0
 
     def orient(self, dir='vertical'):
         rotate_angle = self.estimate_angle()
@@ -110,7 +134,7 @@ class ImagePatch:
 
     def recenter(self, new_width, new_height):
         # define center of original patch
-        old_x, old_y = self.estimate_center()
+        old_x, old_y = self.estimate_center(absolute=False)
         old_x = np.clip(np.round(old_x), 0, self.img.shape[1] - 1).astype(int)
         old_y = np.clip(np.round(old_y), 0, self.img.shape[0] - 1).astype(int)
 
@@ -146,17 +170,17 @@ class ImagePatch:
 def main():
     # read the image
     image_path = os.path.join(top_dir(), 'images', '12-01_10-41-12', '12.bmp')
-    img = cv2.imread(image_path)
+    img = cv2.imread(image_path, 0)
 
     # extract contours
     mask = img_to_mask(img)
-    full_img = FullImage(img, mask=mask)
+    contours = find_contours(img, mask=mask)
 
     # pick out the largest contour
-    contour = max(full_img.contours, key=lambda x: cv2.contourArea(x))
+    contour = max(contours, key=lambda x: cv2.contourArea(x))
 
     # crop and rotate
-    patch = crop_to_contour(full_img.img, contour)
+    patch = crop_to_contour(img, contour)
     patch = patch.rotate(patch.estimate_angle()+np.pi/2)
 
     # display result

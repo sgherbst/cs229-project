@@ -28,3 +28,7 @@ def img_to_mask(img):
     cv2.circle(mask, (r, r), r, 255, -1)
 
     return mask
+
+def erode(mask, kernel_size):
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    return cv2.erode(mask, kernel, iterations=1)

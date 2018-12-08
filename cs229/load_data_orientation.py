@@ -11,10 +11,10 @@ from glob import glob
 
 from cs229.files import top_dir
 from cs229.annotation import Annotation
-from cs229.full_img import FullImage
+from cs229.contour import find_contours
 from cs229.image import img_to_mask
 from cs229.patch import crop_to_contour
-from cs229.load_data_contour import contour_label
+from cs229.contour import contour_label
 import joblib
 
 CATEGORIES = ['normal', 'flipped']
@@ -78,12 +78,12 @@ def load_data(tol_radians=0.1, augment_number=10):
 
     for f in files:
         anno = Annotation(f)
-        img = cv2.imread(anno.image_path)
+        img = cv2.imread(anno.image_path, 0)
 
         mask = img_to_mask(img)
-        full_image = FullImage(img, mask=mask)
+        contours = find_contours(img, mask=mask)
 
-        for contour in full_image.contours:
+        for contour in contours:
             type = contour_label(anno, contour)
 
             if type == 'male' and anno.has('ma') and anno.has('mh'):
@@ -98,7 +98,7 @@ def load_data(tol_radians=0.1, augment_number=10):
                 continue
 
             # make patch, which will compute the angle from the image
-            patch = crop_to_contour(full_image.img, contour)
+            patch = crop_to_contour(img, contour)
 
             # compute angle from labels
             label_angle = np.arctan2(abdomen[1] - head[1], head[0] - abdomen[0])

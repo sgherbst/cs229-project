@@ -7,7 +7,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-
 from sklearn.pipeline import make_pipeline
 from sklearn.decomposition import PCA
 
@@ -25,12 +24,9 @@ class PosePredictor:
         self.clf = joblib.load(os.path.join(top_dir(), 'cs229', clf_joblib_name(type)))
         self.hog = make_hog()
 
-    def predict(self, img, contour):
-        patch = crop_to_contour(img, contour)
-
+    def predict(self, patch):
         # find center
-        center = patch.estimate_center()
-        center = (center[0]+patch.ulx, center[1]+patch.uly)
+        center = patch.estimate_center(absolute=True)
 
         # find angle
         angle = patch.estimate_angle()
@@ -53,10 +49,11 @@ class PosePredictor:
         return center, angle
 
 def plot_pca(clf, X, y):
-    scaler = clf.named_steps['standardscaler']
+    #scaler = clf.named_steps['standardscaler']
     pca_std = clf.named_steps['pca']
 
-    X_t = pca_std.transform(scaler.transform(X))
+    #X_t = pca_std.transform(scaler.transform(X))
+    X_t = pca_std.transform(X)
 
     for l, c, m in zip(range(2), ('blue', 'red'), ('o', 'x')):
         plt.scatter(X_t[y == l, 0], X_t[y == l, 1], color=c, label='class %s' % l, alpha=0.5, marker=m)
@@ -69,7 +66,8 @@ def plot_pca(clf, X, y):
 def train(X, y, type, plot=True, dump=True, report=True):
     X_train, X_test, y_train, y_test = train_test_split(X[type], y[type])
 
-    clf = make_pipeline(StandardScaler(), PCA(n_components=3), LogisticRegression())
+    #clf = make_pipeline(StandardScaler(), PCA(n_components=3), LogisticRegression())
+    clf = make_pipeline(PCA(n_components=3), LogisticRegression())
 
     clf.fit(X_train, y_train)
 
