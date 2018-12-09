@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, mean_squared_error
 from sklearn.metrics import precision_recall_fscore_support
 from prettytable import PrettyTable
 
@@ -9,6 +9,20 @@ def angle_diff(a, b):
 
 def report_model(y_test, y_pred, categories):
     print(classification_report(y_test, y_pred, digits=3, target_names=categories))
+
+def report_model_regression(y_test, y_pred, units):
+    std = np.std(y_test-y_pred)
+    print('Error ({}): +/- {:0.3f}'.format(units, std))
+
+def train_experiment_regression(train, units, trials=100):
+    std = []
+
+    for _ in range(trials):
+        _, y_test, y_pred = train()
+        std.append(np.std(y_test-y_pred))
+
+    print('Ran {} trials.'.format(trials))
+    print('Error ({}): +/- {:0.3f}'.format(units, np.mean(std)))
 
 def train_experiment(train, categories, trials=100):
     results = {}

@@ -55,7 +55,7 @@ def plot_pca(clf, X, y, type):
     for l, c, m in zip(range(2), ('blue', 'red'), ('o', 'x')):
         plt.scatter(X_t[y == l, 0], X_t[y == l, 1], color=c, label=CATEGORIES[l], alpha=0.5, marker=m)
 
-    plt.title('PCA for Orientation Features ({} fly)')
+    plt.title('PCA for Orientation Features ({} fly)'.format(type))
     plt.legend(loc='upper right')
     plt.xlabel('PCA 1')
     plt.ylabel('PCA 2')
