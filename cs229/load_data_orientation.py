@@ -15,13 +15,10 @@ from cs229.contour import find_contours
 from cs229.image import img_to_mask
 from cs229.patch import crop_to_contour
 from cs229.contour import contour_label
+from cs229.util import angle_diff
 import joblib
 
 CATEGORIES = ['normal', 'flipped']
-
-def angle_diff(a, b):
-    # https://stackoverflow.com/questions/1878907/the-smallest-difference-between-2-angles
-    return ((a-b) + np.pi) % (2*np.pi) - np.pi
 
 def make_hog_patch(patch):
     patch = patch.orient('vertical')

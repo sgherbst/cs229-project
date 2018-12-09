@@ -4,22 +4,16 @@ from time import perf_counter
 
 from cs229.display import open_window, show_image
 from cs229.files import open_video
-from cs229.image import img_to_mask
-from cs229.contour import find_contours
-from cs229.patch import crop_to_contour
+from cs229.image import img_to_mask, bound_point
+from cs229.contour import find_contours, in_contour
+from cs229.patch import crop_to_contour, mask_from_contour
 from cs229.train_is_fly import IsFlyPredictor
 from cs229.train_id import IdPredictor
 from cs229.train_orientation import PosePredictor
 
-def bound(pt, img):
-    def clip(dim):
-        return np.clip(np.round(pt[dim]), 0, img.shape[1-dim] - 1).astype(int)
-
-    return (clip(0), clip(1))
-
 def main(profile=False):
     # prepare video
-    cap, props = open_video('test1')
+    cap, props = open_video('cropped')
     _, img = cap.read()
     img = img[:, :, 0]
     mask = img_to_mask(img)
@@ -62,7 +56,6 @@ def main(profile=False):
             contours_by_label[label].append(contour)
 
         results = {}
-
         if len(contours_by_label['one'])==2 and len(contours_by_label['both'])==0:
             contour_1 = contours_by_label['one'][0]
             contour_2 = contours_by_label['one'][1]
@@ -85,6 +78,8 @@ def main(profile=False):
                 result.update(dict(cx=cx, cy=cy, angle=angle))
         elif len(contours_by_label['one'])==0 and len(contours_by_label['both'])==1:
             results['both'] = dict(contour=contours_by_label['both'][0])
+            results['both']['patch'] = crop_to_contour(img, results['both']['contour'])
+            results['both']['cx'], results['both']['cy'] = results['both']['patch'].estimate_center(absolute=True)
         else:
             print('Unexpected case.')
             continue
@@ -102,14 +97,14 @@ def main(profile=False):
                 continue
 
             # draw center
-            center = bound((result['cx'], result['cy']), out)
+            center = bound_point((result['cx'], result['cy']), out)
             cv2.circle(out, center, 5, colors[label], -1)
 
             # draw arrow in direction of orientation
             MA, ma = result['patch'].estimate_axes()
             ax = result['cx'] + 0.3*MA*np.cos(result['angle'])
             ay = result['cy'] - 0.3*MA*np.sin(result['angle'])
-            tip = bound((ax, ay), out)
+            tip = bound_point((ax, ay), out)
             cv2.arrowedLine(out, center, tip, colors[label], 5, tipLength=0.3)
 
         # display image

@@ -10,17 +10,6 @@ from cs229.display import open_window, show_square_image, make_trackbar, get_tra
 from cs229.image import img_to_mask
 from cs229.util import FpsMon
 
-def preprocess(img):
-    blur = cv2.GaussianBlur(img, (31,31), 0)
-    zeroed = img.astype(float) - blur.astype(float)
-    scale = 3*np.std(zeroed)
-    print(np.min(zeroed), np.max(zeroed), scale)
-
-    out = 128*(zeroed/scale + 1)
-    out = np.clip(out, 0, 255)
-
-    return out.astype(np.uint8)
-
 def main(disp_size=1000):
     open_window()
 

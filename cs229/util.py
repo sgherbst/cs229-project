@@ -3,6 +3,10 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 from prettytable import PrettyTable
 
+def angle_diff(a, b):
+    # https://stackoverflow.com/questions/1878907/the-smallest-difference-between-2-angles
+    return ((a-b) + np.pi) % (2*np.pi) - np.pi
+
 def report_model(y_test, y_pred, categories):
     print(classification_report(y_test, y_pred, digits=3, target_names=categories))
 

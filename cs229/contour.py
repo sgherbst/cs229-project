@@ -2,9 +2,13 @@ import cv2
 import os
 import os.path
 import matplotlib.pyplot as plt
+import numpy as np
+from time import perf_counter
 
 from cs229.files import top_dir
 from cs229.image import img_to_mask
+
+ERODE_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(17,17))
 
 def in_contour(pt, contour):
     return cv2.pointPolygonTest(contour, tuple(pt), False) > 0
@@ -24,7 +28,16 @@ def contour_label(anno, contour):
         else:
             return 'neither'
 
-def find_contours(img, mask=None, thresh=115, fly_color='black'):
+def find_contours(img, mask=None, thresh='low', fly_color='black'):
+    if thresh == 'low':
+        thresh_int = 115
+        erode = False
+    elif thresh == 'high':
+        thresh_int = 230
+        erode = True
+    else:
+        raise Exception('Invalid threshold type.')
+
     # determine thresholding type
     if fly_color.lower() == 'black':
         thresh_type = cv2.THRESH_BINARY_INV
@@ -34,7 +47,11 @@ def find_contours(img, mask=None, thresh=115, fly_color='black'):
         raise Exception('Invalid fly color.')
 
     # threshold image
-    _, bw = cv2.threshold(img, thresh, 255, thresh_type)
+    _, bw = cv2.threshold(img, thresh_int, 255, thresh_type)
+
+    # apply erosion if needed
+    if erode:
+        bw = cv2.morphologyEx(bw, cv2.MORPH_OPEN, ERODE_KERNEL)
 
     # apply mask to image if desired
     if mask is not None:

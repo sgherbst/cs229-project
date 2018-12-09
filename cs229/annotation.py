@@ -104,6 +104,36 @@ class Annotation:
                 self.warn('mp not between ma and mh')
                 return
 
+        if self.count('mp2') == 0:
+            pass
+        elif self.count('mp2') == 1:
+            if not (self.count('mp') == 1 and self.count('ma') == 1 and self.count('mh') == 1):
+                self.warn('Must define mp, ma, and mh to use mp2.')
+                return
+
+            ma = self.get('ma')[0]
+            mh = self.get('mh')[0]
+            mp = self.get('mp')[0]
+            mp2 = self.get('mp2')[0]
+
+            if not (0 <= project(mh, ma, mp2) <= project(mh, ma, mp)):
+                self.warn('mp2 must be between mh and mp')
+                return
+        else:
+            self.warn('Cannot define multiple mp2 points.')
+            return
+
+        if self.count('mw') == 0:
+            pass
+        elif self.count('mw') == 2:
+            if not (self.count('mp') == 1 and self.count('ma') == 1 and self.count('mh') == 1 and
+                    self.count('mp2')==1):
+                self.warn('Must define mp, mp2, ma, and mh to define wings.')
+                return
+        else:
+            self.warn('Must define zero or two wings.')
+            return
+
     def warn(self, msg):
         print('{}: {}'.format(self.image_path, msg))
 
@@ -112,6 +142,7 @@ def main():
     folders.append(os.path.join(top_dir(), 'images', '12-04_17-54-43'))
     folders.append(os.path.join(top_dir(), 'images', '12-05-12-43-00'))
     folders.append(os.path.join(top_dir(), 'images', '12-07_16_45_00'))
+    folders.append(os.path.join(top_dir(), 'images', '12-08_11-15-00'))
 
     for folder in folders:
         for f in glob(os.path.join(folder, '*.json')):

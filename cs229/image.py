@@ -1,6 +1,12 @@
 import cv2
 import numpy as np
 
+def bound_point(pt, img):
+    def clip(dim):
+        return np.clip(np.round(pt[dim]), 0, img.shape[1-dim] - 1).astype(int)
+
+    return (clip(0), clip(1))
+
 def crop_to_circle(frame, roi_circle):
     (cx, cy), cr = roi_circle
     return frame[cy-cr:cy+cr,cx-cr:cx+cr]

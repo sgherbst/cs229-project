@@ -45,5 +45,5 @@ def show_image(frame, downsamp=1):
 def make_trackbar(name, default, max):
     cv2.createTrackbar(name, WINDOW_NAME, default, max, nothing)
 
-def get_trackbar(name):
-    return cv2.getTrackbarPos(name, WINDOW_NAME)
+def get_trackbar(name, min=0):
+    return max(cv2.getTrackbarPos(name, WINDOW_NAME), min)

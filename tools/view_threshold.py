@@ -17,8 +17,6 @@ def main():
     # add trackbars
     make_trackbar('min', 0, 255)
     make_trackbar('max', 210, 255)
-    make_trackbar('boundary', 20, 40)
-    make_trackbar('erode', 0, 10)
 
     while True:
         # read image
@@ -29,16 +27,12 @@ def main():
 
         # generate mask
         cmask = img_to_mask(img)
-        cmask = erode(cmask, get_trackbar('boundary'))
 
         fmask = cv2.inRange(img, get_trackbar('min'), get_trackbar('max'))
         mask = cv2.bitwise_and(cmask, fmask)
-        if get_trackbar('erode') != 0:
-            mask = erode(mask, get_trackbar('erode'))
 
         out = cv2.bitwise_and(img, img, mask=mask)
-
-        print(get_trackbar('max'), get_trackbar('boundary'), get_trackbar('erode'))
+        print(get_trackbar('max'))
 
         show_image(out, downsamp=2)
 
