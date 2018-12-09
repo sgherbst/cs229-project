@@ -19,6 +19,24 @@ import joblib
 
 CLF_JOBLIB_NAME = 'clf_wing.joblib'
 
+class WingPredictor:
+    def __init__(self):
+        self.clf = joblib.load(os.path.join(top_dir(), 'cs229', CLF_JOBLIB_NAME))
+        self.hog = make_hog()
+
+    def predict(self, patch):
+        # create a hog patch for the right wing
+        hog_patch_right = make_hog_patch(patch)
+        features_right = patch_to_features(hog_patch_right, self.hog).reshape(1, -1)
+        wing_angle_right = self.clf.predict(features_right)[0]
+
+        # create a hog patch for the left wing
+        hog_patch_left = make_hog_patch(patch.flip('horizontal'))
+        features_left = patch_to_features(hog_patch_left, self.hog).reshape(1, -1)
+        wing_angle_left = self.clf.predict(features_left)[0]
+
+        return wing_angle_right, wing_angle_left
+
 def plot_pca(clf, X, y):
     X_t = clf.named_steps['pca'].transform(X)
 
@@ -55,8 +73,8 @@ def main():
     X = joblib.load('X_wing.joblib')
     y = joblib.load('y_wing.joblib')
 
-    #train_once(X, y)
-    train_experiment_regression(lambda: train(X, y), 'degrees')
+    train_once(X, y)
+    #train_experiment_regression(lambda: train(X, y), 'degrees')
 
 if __name__ == '__main__':
     main()

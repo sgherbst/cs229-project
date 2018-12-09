@@ -25,7 +25,7 @@ def get_rotation_matrix(theta):
     c, s = np.cos(theta), np.sin(theta)
     return np.array([[c,-s], [s, c]], dtype=float)
 
-def male_fly_patch(img, mask, body_center, rotate_angle, crop_size=400, min_area=10000, max_area=19000):
+def male_fly_patch(img, mask, body_center, rotate_angle, crop_size=400):
     # legalize body_center
     body_center = bound_point((body_center[0], body_center[1]), img)
 
@@ -39,7 +39,7 @@ def male_fly_patch(img, mask, body_center, rotate_angle, crop_size=400, min_area
     # mask out everything except the contour containing the fly
     fly_center = (crop_size//2, crop_size//2)
     for contour in sorted(contours, key=lambda x: len(x)):
-        if in_contour(fly_center, contour) and (min_area <= cv2.contourArea(contour) <= max_area):
+        if in_contour(fly_center, contour):
             # create new mask for fly region (still keeping circular ROI)
             fly_mask = mask_from_contour(fly_patch.img, contour)
             fly_patch.mask = cv2.bitwise_and(fly_patch.mask, fly_mask)
@@ -85,6 +85,7 @@ def patch_to_features(hog_patch, hog):
 
 def load_data(tol_radians=0.1):
     #folders = ['12-04_17-54-43', '12-05-12-43-00']
+    #folders = ['12-08_11-15-00', '12-08_22_00_00']
     folders = ['12-08_11-15-00']
     folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
     folders = [glob(os.path.join(folder, '*.json')) for folder in folders]
@@ -166,18 +167,22 @@ def load_data(tol_radians=0.1):
         X.append(patch_to_features(hog_patch_right, hog))
         y.append(wings['right'])
 
+        plt.imshow(hog_patch_right.img)
+        plt.show()
+
         # create a hog patch for the left wing
         hog_patch_left = make_hog_patch(fly_patch.flip('horizontal'))
         X.append(patch_to_features(hog_patch_left, hog))
         y.append(wings['left'])
+
+        plt.imshow(hog_patch_left.img)
+        plt.show()
 
     # assemble features
     X = np.array(X, dtype=float)
 
     # assemble labels
     y = np.array(y, dtype=float)
-
-    print(X.shape)
 
     return X, y
 

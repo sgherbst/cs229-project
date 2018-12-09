@@ -10,10 +10,18 @@ from cs229.patch import crop_to_contour, mask_from_contour
 from cs229.train_is_fly import IsFlyPredictor
 from cs229.train_id import IdPredictor
 from cs229.train_orientation import PosePredictor
+from cs229.load_data_wing import male_fly_patch
+from cs229.train_wing import WingPredictor
+
+def arrow_from_point(img, point, length, angle, color):
+    ax = point[0] + length * np.cos(angle)
+    ay = point[1] - length * np.sin(angle)
+    tip = bound_point((ax, ay), img)
+    cv2.arrowedLine(img, point, tip, color, 5, tipLength=0.3)
 
 def main(profile=False):
     # prepare video
-    cap, props = open_video('cropped')
+    cap, props = open_video('test1')
     _, img = cap.read()
     img = img[:, :, 0]
     mask = img_to_mask(img)
@@ -22,6 +30,7 @@ def main(profile=False):
     is_fly_predictor = IsFlyPredictor()
     id_predictor = IdPredictor()
     pose_predictor = {type: PosePredictor(type) for type in ['male', 'female']}
+    wing_predictor = WingPredictor()
 
     # display-specific actions
     if not profile:
@@ -76,6 +85,16 @@ def main(profile=False):
                 result = results[type]
                 (cx, cy), angle = pose_predictor[type].predict(result['patch'])
                 result.update(dict(cx=cx, cy=cy, angle=angle))
+
+            # predict wing angle
+            patch_m = male_fly_patch(img, mask, (results['male']['cx'], results['male']['cy']),
+                                     results['male']['angle'])
+            if patch_m is not None:
+                wing_angle_right, wing_angle_left = wing_predictor.predict(patch_m)
+                if wing_angle_right is not None:
+                    results['male']['wing_angle_right'] = wing_angle_right
+                if wing_angle_left is not None:
+                    results['male']['wing_angle_left'] = wing_angle_left
         elif len(contours_by_label['one'])==0 and len(contours_by_label['both'])==1:
             results['both'] = dict(contour=contours_by_label['both'][0])
             results['both']['patch'] = crop_to_contour(img, results['both']['contour'])
@@ -102,10 +121,15 @@ def main(profile=False):
 
             # draw arrow in direction of orientation
             MA, ma = result['patch'].estimate_axes()
-            ax = result['cx'] + 0.3*MA*np.cos(result['angle'])
-            ay = result['cy'] - 0.3*MA*np.sin(result['angle'])
-            tip = bound_point((ax, ay), out)
-            cv2.arrowedLine(out, center, tip, colors[label], 5, tipLength=0.3)
+            arrow_from_point(out, center, 0.3*MA, result['angle'], colors[label])
+
+            if label == 'male':
+                if 'wing_angle_right' in result:
+                    arrow_angle = result['angle'] + result['wing_angle_right'] - np.pi
+                    arrow_from_point(out, center, 0.3*MA, arrow_angle, (255, 255, 0))
+                if 'wing_angle_left' in result:
+                    arrow_angle = result['angle'] - result['wing_angle_left'] - np.pi
+                    arrow_from_point(out, center, 0.3*MA, arrow_angle, (255, 255, 0))
 
         # display image
         show_image(out, downsamp=2)

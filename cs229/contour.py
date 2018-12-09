@@ -8,7 +8,7 @@ from time import perf_counter
 from cs229.files import top_dir
 from cs229.image import img_to_mask
 
-ERODE_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(17,17))
+ERODE_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
 
 def in_contour(pt, contour):
     return cv2.pointPolygonTest(contour, tuple(pt), False) > 0
@@ -33,8 +33,8 @@ def find_contours(img, mask=None, thresh='low', fly_color='black'):
         thresh_int = 115
         erode = False
     elif thresh == 'high':
-        thresh_int = 230
-        erode = True
+        thresh_int = 210
+        erode = False
     else:
         raise Exception('Invalid threshold type.')
 

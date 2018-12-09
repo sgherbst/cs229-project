@@ -6,7 +6,7 @@ from cs229.image import img_to_mask, erode
 
 def main():
     # load first frame from video
-    cap, props = open_video('test1')
+    cap, props = open_video('test4')
     ok, img = cap.read()
     img = img[:, :, 0]
 
@@ -16,7 +16,7 @@ def main():
 
     # add trackbars
     make_trackbar('min', 0, 255)
-    make_trackbar('max', 210, 255)
+    make_trackbar('max', 213, 255)
 
     while True:
         # read image
