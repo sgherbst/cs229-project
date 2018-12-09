@@ -5,7 +5,7 @@ from time import perf_counter
 from cs229.display import open_window, show_image
 from cs229.files import open_video
 from cs229.image import img_to_mask, bound_point
-from cs229.contour import find_contours, in_contour
+from cs229.contour import find_core_contours, in_contour
 from cs229.patch import crop_to_contour, mask_from_contour
 from cs229.train_is_fly import IsFlyPredictor
 from cs229.train_id import IdPredictor
@@ -54,7 +54,7 @@ def main(profile=False):
         frames += 1
 
         # extract contours
-        contours = find_contours(img, mask=mask)
+        contours = find_core_contours(img, mask=mask)
 
         # draw contours with a color associated with the class
         contours_by_label = {'neither': [], 'one': [], 'both': []}

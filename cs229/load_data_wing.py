@@ -11,7 +11,7 @@ from glob import glob
 
 from cs229.files import top_dir
 from cs229.annotation import Annotation
-from cs229.contour import find_contours, in_contour
+from cs229.contour import find_core_contours, find_body_contours, in_contour
 from cs229.image import img_to_mask, bound_point
 from cs229.patch import crop_to_contour, ImagePatch, mask_from_contour
 from cs229.contour import contour_label
@@ -19,6 +19,8 @@ from cs229.util import angle_diff
 import joblib
 
 CATEGORIES = ['normal', 'flipped']
+
+OPEN_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(25,25))
 
 def get_rotation_matrix(theta):
     # ref: https://scipython.com/book/chapter-6-numpy/examples/creating-a-rotation-matrix-in-numpy/
@@ -34,7 +36,7 @@ def male_fly_patch(img, mask, body_center, rotate_angle, crop_size=400):
     fly_patch = fly_patch.recenter(crop_size, crop_size, body_center)
 
     # extract contours of the patch
-    contours = find_contours(fly_patch.img, fly_patch.mask, thresh='high')
+    contours = find_body_contours(fly_patch.img, fly_patch.mask)
 
     # mask out everything except the contour containing the fly
     fly_center = (crop_size//2, crop_size//2)
@@ -85,8 +87,7 @@ def patch_to_features(hog_patch, hog):
 
 def load_data(tol_radians=0.1):
     #folders = ['12-04_17-54-43', '12-05-12-43-00']
-    #folders = ['12-08_11-15-00', '12-08_22_00_00']
-    folders = ['12-08_11-15-00']
+    folders = ['12-08_11-15-00', '12-08_22_00_00']
     folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
     folders = [glob(os.path.join(folder, '*.json')) for folder in folders]
 
@@ -101,7 +102,7 @@ def load_data(tol_radians=0.1):
         img = cv2.imread(anno.image_path, 0)
 
         mask = img_to_mask(img)
-        contours = find_contours(img, mask=mask)
+        contours = find_core_contours(img, mask=mask)
 
         for contour in contours:
             type = contour_label(anno, contour)
@@ -143,40 +144,45 @@ def load_data(tol_radians=0.1):
         if fly_patch is None:
             continue
 
-        # determine wing orientation
-        wings = {'left': None, 'right': None}
-
         origin = bound_point((body_center[0], body_center[1]), img)
         mp2_rel = [mp2[0]-origin[0], origin[1]-mp2[1]]
 
         rot_mat = get_rotation_matrix(np.pi/2-rotate_angle)
         mp2_rot = rot_mat.dot(mp2_rel)
 
+        wings = []
         for mw in anno.get('mw'):
             wing_rel = [mw[0]-origin[0], origin[1]-mw[1]]
             wing_rot = rot_mat.dot(wing_rel) - mp2_rot
             angle = np.arctan(abs(wing_rot[0])/abs(wing_rot[1]))
 
-            if wing_rot[0] >= 0:
-                wings['right'] = angle
-            else:
-                wings['left'] = angle
+            wings.append({'x': wing_rot[0], 'angle': angle})
+        assert len(wings) == 2
+
+        if wings[0]['x'] > wings[1]['x']:
+            # wing 0 is right, wing 1 is left
+            right_wing_angle = wings[0]['angle']
+            left_wing_angle = wings[1]['angle']
+        else:
+            # wing 1 is right, wing 0 is left
+            right_wing_angle = wings[1]['angle']
+            left_wing_angle = wings[0]['angle']
 
         # create a hog patch for the right wing
         hog_patch_right = make_hog_patch(fly_patch)
         X.append(patch_to_features(hog_patch_right, hog))
-        y.append(wings['right'])
+        y.append(right_wing_angle)
 
-        plt.imshow(hog_patch_right.img)
-        plt.show()
+        # plt.imshow(hog_patch_right.img)
+        # plt.show()
 
         # create a hog patch for the left wing
         hog_patch_left = make_hog_patch(fly_patch.flip('horizontal'))
         X.append(patch_to_features(hog_patch_left, hog))
-        y.append(wings['left'])
+        y.append(left_wing_angle)
 
-        plt.imshow(hog_patch_left.img)
-        plt.show()
+        # plt.imshow(hog_patch_left.img)
+        # plt.show()
 
     # assemble features
     X = np.array(X, dtype=float)

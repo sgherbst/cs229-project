@@ -7,7 +7,7 @@ import imutils
 
 from cs229.files import top_dir
 from cs229.image import img_to_mask, bound_point
-from cs229.contour import find_contours
+from cs229.contour import find_core_contours
 from math import degrees
 
 def mask_from_contour(img, contour, color='white'):
@@ -229,7 +229,7 @@ def main():
 
     # extract contours
     mask = img_to_mask(img)
-    contours = find_contours(img, mask=mask)
+    contours = find_core_contours(img, mask=mask)
 
     # pick out the largest contour
     contour = max(contours, key=lambda x: cv2.contourArea(x))

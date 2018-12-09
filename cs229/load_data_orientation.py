@@ -11,7 +11,7 @@ from glob import glob
 
 from cs229.files import top_dir
 from cs229.annotation import Annotation
-from cs229.contour import find_contours
+from cs229.contour import find_core_contours
 from cs229.image import img_to_mask
 from cs229.patch import crop_to_contour
 from cs229.contour import contour_label
@@ -78,7 +78,7 @@ def load_data(tol_radians=0.1, augment_number=10):
         img = cv2.imread(anno.image_path, 0)
 
         mask = img_to_mask(img)
-        contours = find_contours(img, mask=mask)
+        contours = find_core_contours(img, mask=mask)
 
         for contour in contours:
             type = contour_label(anno, contour)
