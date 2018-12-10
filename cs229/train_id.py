@@ -36,7 +36,7 @@ def train(X, y):
 
 def train_once(X, y):
     clf, y_test, y_pred = train(X, y)
-    report_model(y_test, y_pred, CATEGORIES)
+    report_model(y_test, y_pred)
 
     joblib.dump(clf, CLF_JOBLIB_NAME)
 
@@ -45,7 +45,7 @@ def main():
     y = joblib.load(Y_JOBLIB_NAME)
 
     train_once(X, y)
-    #train_experiment(lambda: train(X, y), CATEGORIES)
+    #train_experiment(lambda: train(X, y))
 
 if __name__ == '__main__':
     main()

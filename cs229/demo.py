@@ -21,7 +21,7 @@ def arrow_from_point(img, point, length, angle, color):
 
 def main(profile=False):
     # prepare video
-    cap, props = open_video('test1')
+    cap, props = open_video('test4')
     _, img = cap.read()
     img = img[:, :, 0]
     mask = img_to_mask(img)

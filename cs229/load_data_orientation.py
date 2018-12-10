@@ -1,21 +1,16 @@
-import os
-import os.path
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from itertools import chain
 from math import degrees
 
-from glob import glob
-
-from cs229.files import top_dir
+from cs229.files import get_annotation_files
 from cs229.annotation import Annotation
 from cs229.contour import find_core_contours
 from cs229.image import img_to_mask
 from cs229.patch import crop_to_contour
 from cs229.contour import contour_label
-from cs229.util import angle_diff
+from cs229.util import angle_diff, report_labels
 import joblib
 
 CATEGORIES = ['normal', 'flipped']
@@ -62,18 +57,18 @@ def augment_data(hog_patch, label, pos_noise=3, angle_noise=0.05, pixel_noise=3)
     return hog_patch, label
 
 def load_data(tol_radians=0.1, augment_number=10):
-    folders = ['12-04_17-54-43', '12-05-12-43-00']
-    folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
-    folders = [glob(os.path.join(folder, '*.json')) for folder in folders]
-
-    files = chain(*folders)
-
     X = {'male': [], 'female': []}
     y = {'male': [], 'female': []}
 
     hog = make_hog()
 
-    for f in files:
+    img_count = 0
+    hand_labeled_count = 0
+
+    for f in get_annotation_files():
+        # keep track of whether any data is actually used from this file
+        used_file = False
+
         anno = Annotation(f)
         img = cv2.imread(anno.image_path, 0)
 
@@ -118,17 +113,34 @@ def load_data(tol_radians=0.1, augment_number=10):
             X[type].append(patch_to_features(hog_patch, hog))
             y[type].append(CATEGORIES.index(label))
 
+            hand_labeled_count += 1
+            used_file = True
+
             # augment data with reflections, rotations, noise, translation
             for _ in range(augment_number):
                 hog_patch_aug, label_aug = augment_data(hog_patch, label)
                 X[type].append(patch_to_features(hog_patch_aug, hog))
                 y[type].append(CATEGORIES.index(label_aug))
 
+        if used_file:
+            img_count += 1
+
     # assemble features
     X = {k: np.array(v, dtype=float) for k, v in X.items()}
 
     # assemble labels
     y = {k: np.array(v, dtype=int) for k, v in y.items()}
+
+    print('Used {} annotated images.'.format(img_count))
+    print('Used {} hand-labeled flies.'.format(hand_labeled_count))
+    print()
+
+    print('Male classifier:')
+    report_labels(CATEGORIES, y['male'])
+    print()
+
+    print('Female classifier:')
+    report_labels(CATEGORIES, y['female'])
 
     return X, y
 

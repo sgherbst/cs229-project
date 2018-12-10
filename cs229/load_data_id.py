@@ -1,18 +1,13 @@
-import os
-import os.path
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from itertools import chain
-
-from glob import glob
-
-from cs229.files import top_dir
+from cs229.files import get_annotation_files
 from cs229.annotation import Annotation
 from cs229.image import img_to_mask
 from cs229.contour import contour_label, find_core_contours
 from cs229.patch import crop_to_contour
+from cs229.util import report_labels
 
 import joblib
 
@@ -41,16 +36,12 @@ def make_features(contour_1, contour_2, patch_1, patch_2):
     return features
 
 def load_data():
-    folders = ['12-04_17-54-43', '12-05-12-43-00', '12-07_16_45_00']
-    folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
-    folders = [glob(os.path.join(folder, '*.json')) for folder in folders]
-
-    files = chain(*folders)
-
     X = []
     y = []
 
-    for f in files:
+    img_count = 0
+
+    for f in get_annotation_files():
         anno = Annotation(f)
         img = cv2.imread(anno.image_path, 0)
 
@@ -89,11 +80,16 @@ def load_data():
             X.append(make_features(female, male, female_patch, male_patch))
             y.append(CATEGORIES.index('fm'))
 
+            img_count += 1
+
     # assemble features
     X = np.array(X, dtype=float)
 
     # assemble labels
     y = np.array(y, dtype=int)
+
+    print('Used {} annotated images.'.format(img_count))
+    report_labels(CATEGORIES, y)
 
     return X, y
 

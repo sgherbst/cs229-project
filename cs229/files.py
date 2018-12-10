@@ -4,6 +4,8 @@ import pickle
 import cv2
 from tqdm import tqdm
 import datetime
+from glob import glob
+from itertools import chain
 
 class CapProps:
     def __init__(self, width, height, fps):
@@ -14,6 +16,14 @@ class CapProps:
     @property
     def t_ms(self):
         return int(round(1e3/self.fps))
+
+def get_annotation_files():
+    folders = ['12-04_17-54-43', '12-05-12-43-00', '12-07_16_45_00', '12-08_11-15-00', '12-08_22_00_00']
+    folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
+
+    files = [glob(os.path.join(folder, '*.json')) for folder in folders]
+
+    return chain(*files)
 
 def top_dir():
     path_to_this_file = os.path.realpath(os.path.expanduser(__file__))

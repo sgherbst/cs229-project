@@ -4,7 +4,7 @@ from glob import glob
 import os
 import os.path
 
-from cs229.files import top_dir
+from cs229.files import top_dir, get_annotation_files
 
 def project(a, b, c):
     # make numpy arrays of the three points
@@ -138,16 +138,8 @@ class Annotation:
         print('{}: {}'.format(self.image_path, msg))
 
 def main():
-    folders = []
-    folders.append(os.path.join(top_dir(), 'images', '12-04_17-54-43'))
-    folders.append(os.path.join(top_dir(), 'images', '12-05-12-43-00'))
-    folders.append(os.path.join(top_dir(), 'images', '12-07_16_45_00'))
-    folders.append(os.path.join(top_dir(), 'images', '12-08_11-15-00'))
-    folders.append(os.path.join(top_dir(), 'images', '12-08_22_00_00'))
-
-    for folder in folders:
-        for f in glob(os.path.join(folder, '*.json')):
-            Annotation(f).image_path
+    for file in get_annotation_files():
+        Annotation(file)
 
 if __name__ == '__main__':
     main()

@@ -79,7 +79,7 @@ def train(X, y, type, plot=False):
 
 def train_once(X, y, type):
     clf, y_test, y_pred = train(X, y, type, plot=True)
-    report_model(y_test, y_pred, CATEGORIES)
+    report_model(y_test, y_pred)
 
     joblib.dump(clf, clf_joblib_name(type))
 
@@ -90,7 +90,7 @@ def main():
     for type in ['male', 'female']:
         print('{} fly orientation detector...'.format(type.capitalize()))
         train_once(X, y, type)
-        #train_experiment(lambda: train(X, y, type), CATEGORIES)
+        #train_experiment(lambda: train(X, y, type))
 
 if __name__ == '__main__':
     main()

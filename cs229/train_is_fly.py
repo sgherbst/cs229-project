@@ -32,7 +32,7 @@ def train(X, y):
 
 def train_once(X, y):
     clf, y_test, y_pred = train(X, y)
-    report_model(y_test, y_pred, CATEGORIES)
+    report_model(y_test, y_pred)
 
     tree.export_graphviz(clf, out_file='tree_is_fly.dot', feature_names=FEATURES,
                          class_names=CATEGORIES, filled=True, rounded=True, special_characters=True)
@@ -44,7 +44,7 @@ def main():
     y = joblib.load(Y_JOBLIB_NAME)
 
     train_once(X, y)
-    #train_experiment(lambda: train(X, y), CATEGORIES)
+    #train_experiment(lambda: train(X, y))
 
 if __name__ == '__main__':
     main()

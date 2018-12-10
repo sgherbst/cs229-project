@@ -1,24 +1,17 @@
-import os
-import os.path
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from itertools import chain
 from math import degrees
 
-from glob import glob
-
-from cs229.files import top_dir
+from cs229.files import get_annotation_files
 from cs229.annotation import Annotation
 from cs229.contour import find_core_contours, find_body_contours, in_contour
 from cs229.image import img_to_mask, bound_point
 from cs229.patch import crop_to_contour, ImagePatch, mask_from_contour
 from cs229.contour import contour_label
-from cs229.util import angle_diff
+from cs229.util import angle_diff, report_labels_regression
 import joblib
-
-CATEGORIES = ['normal', 'flipped']
 
 OPEN_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(25,25))
 
@@ -85,19 +78,26 @@ def make_hog():
 def patch_to_features(hog_patch, hog):
     return hog.compute(hog_patch.img).flatten()
 
-def load_data(tol_radians=0.1):
-    #folders = ['12-04_17-54-43', '12-05-12-43-00']
-    folders = ['12-08_11-15-00', '12-08_22_00_00']
-    folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
-    folders = [glob(os.path.join(folder, '*.json')) for folder in folders]
+def augment_data(hog_patch, pos_noise=3, pixel_noise=3):
+    # add some translational noise
+    hog_patch = hog_patch.translate(np.random.uniform(-pos_noise, +pos_noise),
+                                    np.random.uniform(-pos_noise, +pos_noise))
 
-    files = chain(*folders)
+    # add some pixel noise
+    hog_patch = hog_patch.add_noise(pixel_noise)
+
+    return hog_patch
+
+def load_data(tol_radians=0.1, augment_number=10):
     hog = make_hog()
 
     X = []
     y = []
 
-    for f in files:
+    img_count = 0
+    hand_labeled_count = 0
+
+    for f in get_annotation_files():
         anno = Annotation(f)
         img = cv2.imread(anno.image_path, 0)
 
@@ -157,7 +157,9 @@ def load_data(tol_radians=0.1):
             angle = np.arctan(abs(wing_rot[0])/abs(wing_rot[1]))
 
             wings.append({'x': wing_rot[0], 'angle': angle})
-        assert len(wings) == 2
+        if len(wings) != 2:
+            anno.warn('Length of wings is not 2 for some reason, skipping...')
+            continue
 
         if wings[0]['x'] > wings[1]['x']:
             # wing 0 is right, wing 1 is left
@@ -168,18 +170,24 @@ def load_data(tol_radians=0.1):
             right_wing_angle = wings[1]['angle']
             left_wing_angle = wings[0]['angle']
 
-        # create a hog patch for the right wing
-        hog_patch_right = make_hog_patch(fly_patch)
-        X.append(patch_to_features(hog_patch_right, hog))
-        y.append(right_wing_angle)
+        # create a hog patches for both wings
+        data = []
+        data.append({'hog_patch': make_hog_patch(fly_patch), 'angle': right_wing_angle})
+        data.append({'hog_patch': make_hog_patch(fly_patch.flip('horizontal')), 'angle': left_wing_angle})
 
-        # plt.imshow(hog_patch_right.img)
-        # plt.show()
+        # add data to X and y
+        for datum in data:
+            X.append(patch_to_features(datum['hog_patch'], hog))
+            y.append(datum['angle'])
+            hand_labeled_count += 1
 
-        # create a hog patch for the left wing
-        hog_patch_left = make_hog_patch(fly_patch.flip('horizontal'))
-        X.append(patch_to_features(hog_patch_left, hog))
-        y.append(left_wing_angle)
+            # augmenting as desired
+            for _ in range(augment_number):
+                X.append(patch_to_features(augment_data(datum['hog_patch']), hog))
+                y.append(datum['angle'])
+
+        # increment img_count to indicate that this file was actually used
+        img_count += 1
 
         # plt.imshow(hog_patch_left.img)
         # plt.show()
@@ -189,6 +197,10 @@ def load_data(tol_radians=0.1):
 
     # assemble labels
     y = np.array(y, dtype=float)
+
+    print('Used {} annotated images.'.format(img_count))
+    print('Used {} hand-labeled wings.'.format(hand_labeled_count))
+    report_labels_regression(np.degrees(y), 'Wing angle (degrees)', 'labels_wing.eps')
 
     return X, y
 

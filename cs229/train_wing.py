@@ -3,16 +3,14 @@ import os.path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sklearn.preprocessing import StandardScaler, PolynomialFeatures
-from sklearn.metrics import classification_report, mean_squared_error
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.decomposition import PCA
 
 from cs229.files import top_dir
-from cs229.load_data_wing import CATEGORIES, make_hog_patch, make_hog, patch_to_features
-from cs229.patch import crop_to_contour
+from cs229.load_data_wing import make_hog_patch, make_hog, patch_to_features
 from cs229.util import train_experiment_regression, report_model_regression
 
 import joblib
@@ -73,8 +71,8 @@ def main():
     X = joblib.load('X_wing.joblib')
     y = joblib.load('y_wing.joblib')
 
-    train_once(X, y)
-    #train_experiment_regression(lambda: train(X, y), 'degrees')
+    #train_once(X, y)
+    train_experiment_regression(lambda: train(X, y), 'degrees')
 
 if __name__ == '__main__':
     main()
