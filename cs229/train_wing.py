@@ -3,7 +3,6 @@ import os.path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
@@ -35,26 +34,39 @@ class WingPredictor:
 
         return wing_angle_right, wing_angle_left
 
-def plot_pca(clf, X, y):
-    X_t = clf.named_steps['pca'].transform(X)
+def plot_pca(X, y):
+    # apply PCA to data
+    pca = PCA(n_components=200)
+    pca.fit(X, y)
+
+    # plot variance explained by each component
+    plt.plot(np.cumsum(pca.explained_variance_ratio_))
+    plt.xlabel('Number of PCA components')
+    plt.ylabel('Total explained variance ratio')
+    plt.grid()
+
+    plt.savefig('pca_wing_explained.eps'.format(type), bbox_inches='tight')
+    plt.clf()
+
+    # plot principal component vs angle
+    X_t = pca.transform(X)
 
     plt.scatter(X_t[:, 0].flatten(), y.flatten())
-
-    plt.title('PCA for Wing Features')
-    plt.xlabel('PCA 1')
+    plt.xlabel('PCA Component 1')
     plt.ylabel('Wing angle (deg)')
     plt.grid()
 
     plt.savefig('pca_wing.eps'.format(type), bbox_inches='tight')
+    plt.clf()
 
 def train(X, y, plot=False):
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
-    clf = make_pipeline(PCA(n_components=6), PolynomialFeatures(degree=3), LinearRegression())
+    clf = make_pipeline(PCA(n_components=100), LinearRegression())
     clf.fit(X_train, y_train)
 
     if plot:
-        plot_pca(clf, X_train, np.degrees(y_train))
+        plot_pca(X_train, np.degrees(y_train))
 
     y_pred = clf.predict(X_test)
 
@@ -71,8 +83,8 @@ def main():
     X = joblib.load('X_wing.joblib')
     y = joblib.load('y_wing.joblib')
 
-    #train_once(X, y)
-    train_experiment_regression(lambda: train(X, y), 'degrees')
+    train_once(X, y)
+    #train_experiment_regression(lambda: train(X, y), 'degrees')
 
 if __name__ == '__main__':
     main()

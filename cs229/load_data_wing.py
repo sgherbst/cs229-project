@@ -1,3 +1,5 @@
+DEBUG = False
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,14 +8,12 @@ from math import degrees
 
 from cs229.files import get_annotation_files
 from cs229.annotation import Annotation
-from cs229.contour import find_core_contours, find_body_contours, in_contour
+from cs229.contour import find_core_contours, find_wing_contours, in_contour
 from cs229.image import img_to_mask, bound_point
 from cs229.patch import crop_to_contour, ImagePatch, mask_from_contour
 from cs229.contour import contour_label
 from cs229.util import angle_diff, report_labels_regression
 import joblib
-
-OPEN_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(25,25))
 
 def get_rotation_matrix(theta):
     # ref: https://scipython.com/book/chapter-6-numpy/examples/creating-a-rotation-matrix-in-numpy/
@@ -29,7 +29,7 @@ def male_fly_patch(img, mask, body_center, rotate_angle, crop_size=400):
     fly_patch = fly_patch.recenter(crop_size, crop_size, body_center)
 
     # extract contours of the patch
-    contours = find_body_contours(fly_patch.img, fly_patch.mask)
+    contours = find_wing_contours(fly_patch.img, fly_patch.mask)
 
     # mask out everything except the contour containing the fly
     fly_center = (crop_size//2, crop_size//2)
@@ -55,7 +55,7 @@ def male_fly_patch(img, mask, body_center, rotate_angle, crop_size=400):
 def make_hog_patch(fly_patch):
     # crop image to a region of interest around the fly
     cx, cy = fly_patch.img.shape[0]//2, fly_patch.img.shape[1]//2
-    window = (slice(cy - 100, cy + 156), slice(cx, cx + 192))
+    window = (slice(cy - 68, cy + 124), slice(cx, cx + 160))
     hog_patch = ImagePatch(fly_patch.img[window], fly_patch.mask[window])
 
     # downsample patch
@@ -65,7 +65,7 @@ def make_hog_patch(fly_patch):
     return hog_patch
 
 def make_hog():
-    winSize = (96, 128)
+    winSize = (80, 96)
     blockSize = (16, 16)
     blockStride = (8, 8)
     cellSize = (8, 8)
@@ -181,6 +181,10 @@ def load_data(tol_radians=0.1, augment_number=10):
             y.append(datum['angle'])
             hand_labeled_count += 1
 
+            if DEBUG:
+                plt.imshow(datum['hog_patch'].img)
+                plt.show()
+
             # augmenting as desired
             for _ in range(augment_number):
                 X.append(patch_to_features(augment_data(datum['hog_patch']), hog))
@@ -188,9 +192,6 @@ def load_data(tol_radians=0.1, augment_number=10):
 
         # increment img_count to indicate that this file was actually used
         img_count += 1
-
-        # plt.imshow(hog_patch_left.img)
-        # plt.show()
 
     # assemble features
     X = np.array(X, dtype=float)

@@ -8,10 +8,13 @@ from time import perf_counter
 from cs229.files import top_dir
 from cs229.image import img_to_mask
 
-DILATE_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
+KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(9,9))
 
 def in_contour(pt, contour):
     return cv2.pointPolygonTest(contour, tuple(pt), False) > 0
+
+def erode(img):
+    return cv2.erode(img, KERNEL, iterations=1)
 
 def contour_label(anno, contour):
     contains_m = in_contour(anno.get('mp')[0], contour)
@@ -28,41 +31,64 @@ def contour_label(anno, contour):
         else:
             return 'neither'
 
-def find_body_contours(img, mask=None, canny_thresh_1=32, canny_thresh_2=40, canny_sobel=3):
-    # detect edges
-    canny = cv2.Canny(img, canny_thresh_1, canny_thresh_2, canny_sobel)
+def find_wing_contours(img, mask=None, fly_color='black'):
+    # threshold image
+    bw = threshold_wings(img=img, mask=mask, fly_color=fly_color)
 
-    # apply dilation to fix edges
-    dilated = cv2.dilate(canny, DILATE_KERNEL, iterations=1)
+    # extract contours
+    _, contours, _ = cv2.findContours(bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # mask off the outside
-    if mask is not None:
-        dilated = cv2.bitwise_and(dilated, mask)
-
-    # get contours
-    _, contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # return result
+    # return contours
     return contours
 
-def find_core_contours(img, mask=None, fly_color='black', thresh_int=115):
+def threshold_wings(img, mask=None, fly_color='black', mean_offset=5):
     # determine thresholding type
-    if fly_color.lower() == 'black':
+    if fly_color == 'black':
         thresh_type = cv2.THRESH_BINARY_INV
-    elif fly_color.lower() == 'white':
+    elif fly_color == 'white':
         thresh_type = cv2.THRESH_BINARY
     else:
         raise Exception('Invalid fly color.')
 
-    # threshold image
+    # apply median filter
+    blurred = cv2.medianBlur(img, 5)
+    mean_in_roi = np.sum((mask==255)*img)/np.sum(mask==255)
+
+    # threshold image a bit below the median
+    _, bw = cv2.threshold(blurred, mean_in_roi-mean_offset, 255, thresh_type)
+
+    # erode image
+    eroded = erode(bw)
+
+    # mask to ROI
+    masked = cv2.bitwise_and(eroded, mask)
+
+    return masked
+
+def threshold_core(img, mask=None, fly_color='black', thresh_int=115):
+    # determine thresholding type
+    if fly_color == 'black':
+        thresh_type = cv2.THRESH_BINARY_INV
+    elif fly_color == 'white':
+        thresh_type = cv2.THRESH_BINARY
+    else:
+        raise Exception('Invalid fly color.')
+
+    # create the black and white image
     _, bw = cv2.threshold(img, thresh_int, 255, thresh_type)
 
-    # apply mask to image if desired
-    if mask is not None:
-        bw = cv2.bitwise_and(bw, mask)
+    # apply mask to thresholded image
+    masked = cv2.bitwise_and(bw, mask)
+
+    # return the thresholded and masked image
+    return masked
+
+def find_core_contours(img, mask=None, fly_color='black'):
+    # threshold image
+    bw = threshold_core(img=img, mask=mask, fly_color=fly_color)
 
     # extract contours
-    _, contours, _ = cv2.findContours(bw, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # return contours
     return contours
