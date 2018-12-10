@@ -19,7 +19,7 @@ def arrow_from_point(img, point, length, angle, color):
     tip = bound_point((ax, ay), img)
     cv2.arrowedLine(img, point, tip, color, 5, tipLength=0.3)
 
-def main(profile=False):
+def main(profile=True):
     # prepare video
     cap, props = open_video('test4')
     _, img = cap.read()

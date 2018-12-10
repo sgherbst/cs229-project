@@ -77,7 +77,7 @@ def plot_pca(X, y, type):
 def train(X, y, type, plot=False):
     X_train, X_test, y_train, y_test = train_test_split(X[type], y[type])
 
-    clf = make_pipeline(PCA(n_components=100), LogisticRegression(solver='lbfgs'))
+    clf = make_pipeline(PCA(n_components=15), LogisticRegression(solver='lbfgs'))
 
     clf.fit(X_train, y_train)
 

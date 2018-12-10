@@ -78,17 +78,7 @@ def make_hog():
 def patch_to_features(hog_patch, hog):
     return hog.compute(hog_patch.img).flatten()
 
-def augment_data(hog_patch, pos_noise=3, pixel_noise=3):
-    # add some translational noise
-    hog_patch = hog_patch.translate(np.random.uniform(-pos_noise, +pos_noise),
-                                    np.random.uniform(-pos_noise, +pos_noise))
-
-    # add some pixel noise
-    hog_patch = hog_patch.add_noise(pixel_noise)
-
-    return hog_patch
-
-def load_data(tol_radians=0.1, augment_number=10):
+def load_data(tol_radians=0.1):
     hog = make_hog()
 
     X = []
@@ -184,11 +174,6 @@ def load_data(tol_radians=0.1, augment_number=10):
             if DEBUG:
                 plt.imshow(datum['hog_patch'].img)
                 plt.show()
-
-            # augmenting as desired
-            for _ in range(augment_number):
-                X.append(patch_to_features(augment_data(datum['hog_patch']), hog))
-                y.append(datum['angle'])
 
         # increment img_count to indicate that this file was actually used
         img_count += 1

@@ -38,25 +38,7 @@ def make_hog():
 def patch_to_features(hog_patch, hog):
     return hog.compute(hog_patch.img).flatten()
 
-def augment_data(hog_patch, label, pos_noise=3, angle_noise=0.05, pixel_noise=3):
-    # flip image with 50% probability
-    if np.random.rand() < 0.5:
-        hog_patch = hog_patch.rotate180()
-        label = CATEGORIES[1-CATEGORIES.index(label)]
-
-    # add some angular noise
-    hog_patch = hog_patch.rotate(np.random.uniform(-angle_noise, +angle_noise), bound=False)
-
-    # add some translational noise
-    hog_patch = hog_patch.translate(np.random.uniform(-pos_noise, +pos_noise),
-                                    np.random.uniform(-pos_noise, +pos_noise))
-
-    # add some pixel noise
-    hog_patch = hog_patch.add_noise(pixel_noise)
-
-    return hog_patch, label
-
-def load_data(tol_radians=0.1, augment_number=10):
+def load_data(tol_radians=0.1):
     X = {'male': [], 'female': []}
     y = {'male': [], 'female': []}
 
@@ -116,11 +98,13 @@ def load_data(tol_radians=0.1, augment_number=10):
             hand_labeled_count += 1
             used_file = True
 
-            # augment data with reflections, rotations, noise, translation
-            for _ in range(augment_number):
-                hog_patch_aug, label_aug = augment_data(hog_patch, label)
-                X[type].append(patch_to_features(hog_patch_aug, hog))
-                y[type].append(CATEGORIES.index(label_aug))
+            # augment data by flipping the image and inverting the label
+            hog_patch_flipped = hog_patch.rotate180()
+            label_flipped = CATEGORIES[1 - CATEGORIES.index(label)]
+
+            # add this additional feature
+            X[type].append(patch_to_features(hog_patch_flipped, hog))
+            y[type].append(CATEGORIES.index(label_flipped))
 
         if used_file:
             img_count += 1
