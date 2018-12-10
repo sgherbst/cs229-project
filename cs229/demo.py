@@ -12,6 +12,7 @@ from cs229.train_id import IdPredictor
 from cs229.train_orientation import PosePredictor
 from cs229.load_data_wing import male_fly_patch
 from cs229.train_wing import WingPredictor
+from cs229.timing import Profiler
 
 def arrow_from_point(img, point, length, angle, color):
     ax = point[0] + length * np.cos(angle)
@@ -39,10 +40,14 @@ def main(profile=True):
 
     frames = 0
     tick = perf_counter()
+    prof = Profiler()
 
     while True:
         # read frame
+        prof.tick('I/O')
         ok, img = cap.read()
+        prof.tock('I/O')
+
         if not ok:
             break
 
@@ -54,6 +59,7 @@ def main(profile=True):
         frames += 1
 
         # extract contours
+        prof.tick('Find fly contours')
         contours = find_core_contours(img, mask=mask)
 
         # draw contours with a color associated with the class
@@ -64,8 +70,12 @@ def main(profile=True):
             label = is_fly_predictor.predict(contour)
             contours_by_label[label].append(contour)
 
+        prof.tock('Find fly contours')
+
         results = {}
         if len(contours_by_label['one'])==2 and len(contours_by_label['both'])==0:
+            prof.tick('ID as male/female')
+
             contour_1 = contours_by_label['one'][0]
             contour_2 = contours_by_label['one'][1]
 
@@ -81,20 +91,30 @@ def main(profile=True):
                 results['female'] = dict(contour=contour_1, patch=patch_1)
                 results['male'] = dict(contour=contour_2, patch=patch_2)
 
+            prof.tock('ID as male/female')
+
+            prof.tick('Determine orientation')
+
             for type in ['male', 'female']:
                 result = results[type]
                 (cx, cy), angle = pose_predictor[type].predict(result['patch'])
                 result.update(dict(cx=cx, cy=cy, angle=angle))
 
+            prof.tock('Determine orientation')
+
             # predict wing angle
+            prof.tick('Determine wing angles')
             patch_m = male_fly_patch(img, mask, (results['male']['cx'], results['male']['cy']),
                                      results['male']['angle'])
+
             if patch_m is not None:
                 wing_angle_right, wing_angle_left = wing_predictor.predict(patch_m)
                 if wing_angle_right is not None:
                     results['male']['wing_angle_right'] = wing_angle_right
                 if wing_angle_left is not None:
                     results['male']['wing_angle_left'] = wing_angle_left
+
+            prof.tock('Determine wing angles')
         elif len(contours_by_label['one'])==0 and len(contours_by_label['both'])==1:
             results['both'] = dict(contour=contours_by_label['both'][0])
             results['both']['patch'] = crop_to_contour(img, results['both']['contour'])
@@ -140,6 +160,8 @@ def main(profile=True):
             break
 
     tock = perf_counter()
+
+    prof.stop()
 
     print('Total frames: {}'.format(frames))
     print('Elapsed time: {}'.format(tock-tick))

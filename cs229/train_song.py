@@ -2,14 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from cs229.load_data_song import X_JOBLIB_NAME, FEATURES
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 from scipy import signal
-from sklearn.pipeline import make_pipeline
 
 import joblib
 
-WIN_SIZE = 64
+WIN_SIZE = 16
 CLF_JOBLIB_NAME = 'clf_song.joblib'
 
 HAMMING_WINDOW = np.hamming(WIN_SIZE)
@@ -21,56 +18,39 @@ def freq_repr(x):
 
     return fft
 
-def prepare(X):
+def filter(x, alpha=0.95):
+    x = np.array(x)
+    z, _ = signal.lfilter([1 - alpha], [1, -alpha], x, zi=[x[0]])
+
+    return z
+
+def train(X):
     # chop into snippets without None
     right_values = [x[FEATURES.index('right')] for x in X]
     left_values = [x[FEATURES.index('left')] for x in X]
 
-    data = []
-    for k in range(len(X)-WIN_SIZE+1):
-        r_seg = right_values[k:k+WIN_SIZE]
-        l_seg = left_values[k:k+WIN_SIZE]
+    start = 0
+    r_snippet = []
+    l_snippet = []
+    for k, (r, l) in enumerate(zip(right_values, left_values)):
+        if r is None or l is None:
+            if r_snippet and l_snippet:
+                x_axis = list(range(start, k))
+                plt.plot(x_axis, np.degrees(r_snippet), '-b')
+                plt.plot(x_axis, -np.degrees(l_snippet), '-r')
+            start = k+1
+            r_snippet = []
+            l_snippet = []
+        else:
+            r_snippet.append(r)
+            l_snippet.append(l)
 
-        if None in r_seg or None in l_seg:
-            continue
+    plt.legend(['Right Wing', 'Left Wing'])
+    plt.xlabel('Frame #')
+    plt.ylabel('Wing Angle (degrees)')
 
-        r_seg = np.array(r_seg)
-        l_seg = np.array(l_seg)
-        a_seg = np.array(r_seg - l_seg)
-
-        #datum = np.hstack((freq_repr(r_seg)))
-        datum = np.hstack((freq_repr(r_seg), freq_repr(l_seg), freq_repr(a_seg)))
-        data.append(datum)
-
-    X_t = np.array(data, dtype=float)
-
-    return X_t
-
-def train(X):
-    print('Preparing data...')
-    X = prepare(X)
-
-    # apply PCA to data
-    print('Applying PCA...')
-
-    clf = make_pipeline(StandardScaler(), PCA(n_components=50))
-    clf.fit(X)
-
-    plt.plot(np.cumsum(clf.named_steps['pca'].explained_variance_ratio_))
-    plt.xlabel('Number of PCA components')
-    plt.ylabel('Total explained variance ratio')
-    plt.grid()
-    plt.show()
-
-    # plot principal component vs angle
-    X_new = clf.transform(X)
-
-    plt.scatter(X_new[:, 0].flatten(), X_new[:, 1].flatten(), s=0.25)
-    plt.xlabel('PCA Component 1')
-    plt.ylabel('PCA Component 2')
-    plt.grid()
-
-    plt.show()
+    plt.savefig('wave_song.eps'.format(type), bbox_inches='tight')
+    plt.clf()
 
 def main():
     X = joblib.load(X_JOBLIB_NAME)
