@@ -10,7 +10,7 @@ from sklearn.decomposition import PCA
 
 from cs229.files import top_dir
 from cs229.load_data_orientation import CATEGORIES, make_hog_patch, make_hog, patch_to_features
-from cs229.util import train_experiment, report_model
+from cs229.util import report_model
 
 import joblib
 
@@ -84,13 +84,11 @@ def train(X, y, type, plot=False):
     if plot:
         plot_pca(X_train, y_train, type)
 
-    y_pred = clf.predict(X_test)
-
-    return clf, y_test, y_pred
+    return clf, X_train, X_test, y_train, y_test
 
 def train_once(X, y, type):
-    clf, y_test, y_pred = train(X, y, type, plot=True)
-    report_model(y_test, y_pred)
+    clf, X_train, X_test, y_train, y_test = train(X, y, type, plot=True)
+    report_model(clf, X_train, X_test, y_train, y_test)
 
     joblib.dump(clf, clf_joblib_name(type))
 

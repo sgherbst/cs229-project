@@ -10,7 +10,7 @@ from sklearn.decomposition import PCA
 
 from cs229.files import top_dir
 from cs229.load_data_wing import make_hog_patch, make_hog, patch_to_features
-from cs229.util import train_experiment_regression, report_model_regression
+from cs229.util import report_model_regression
 
 import joblib
 
@@ -68,14 +68,12 @@ def train(X, y, plot=False):
     if plot:
         plot_pca(X_train, np.degrees(y_train))
 
-    y_pred = clf.predict(X_test)
-
-    return clf, np.degrees(y_test), np.degrees(y_pred)
+    return clf, X_train, X_test, y_train, y_test
 
 def train_once(X, y):
-    clf, y_test, y_pred = train(X, y, plot=True)
+    clf, X_train, X_test, y_train, y_test = train(X, y, plot=True)
 
-    report_model_regression(y_test, y_pred, 'degrees')
+    report_model_regression('radians', clf, X_train, X_test, y_train, y_test)
 
     joblib.dump(clf, CLF_JOBLIB_NAME)
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from cs229.load_data_id import CATEGORIES, make_features, X_JOBLIB_NAME, Y_JOBLIB_NAME
 from cs229.files import top_dir
-from cs229.util import train_experiment, report_model
+from cs229.util import report_model
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -30,13 +30,11 @@ def train(X, y):
     clf = make_pipeline(StandardScaler(), LogisticRegression(solver='lbfgs'))
     clf = clf.fit(X_train, y_train)
 
-    y_pred = clf.predict(X_test)
-
-    return clf, y_test, y_pred
+    return clf, X_train, X_test, y_train, y_test
 
 def train_once(X, y):
-    clf, y_test, y_pred = train(X, y)
-    report_model(y_test, y_pred)
+    clf, X_train, X_test, y_train, y_test = train(X, y)
+    report_model(clf, X_train, X_test, y_train, y_test)
 
     joblib.dump(clf, CLF_JOBLIB_NAME)
 

@@ -20,12 +20,16 @@ def arrow_from_point(img, point, length, angle, color):
     tip = bound_point((ax, ay), img)
     cv2.arrowedLine(img, point, tip, color, 5, tipLength=0.3)
 
-def main(profile=True):
+def main(profile=False, write=True):
     # prepare video
     cap, props = open_video('test4')
     _, img = cap.read()
     img = img[:, :, 0]
     mask = img_to_mask(img)
+
+    if write:
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        vid_out = cv2.VideoWriter('output.avi', fourcc, props.fps, (props.width, props.height))
 
     # load predictors
     is_fly_predictor = IsFlyPredictor()
@@ -154,6 +158,9 @@ def main(profile=True):
         # display image
         show_image(out, downsamp=2)
 
+        if write:
+            vid_out.write(out)
+
         # handle GUI tasks
         key = cv2.waitKey(props.t_ms)
         if key == ord('q'):
@@ -162,6 +169,9 @@ def main(profile=True):
     tock = perf_counter()
 
     prof.stop()
+
+    if write:
+        vid_out.release()
 
     print('Total frames: {}'.format(frames))
     print('Elapsed time: {}'.format(tock-tick))

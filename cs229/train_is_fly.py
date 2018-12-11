@@ -5,7 +5,7 @@ from sklearn import tree
 from sklearn.model_selection import train_test_split
 from cs229.load_data_is_fly import CATEGORIES, FEATURES, make_features, X_JOBLIB_NAME, Y_JOBLIB_NAME
 from cs229.files import top_dir
-from cs229.util import train_experiment, report_model
+from cs229.util import report_model
 
 import joblib
 
@@ -26,13 +26,11 @@ def train(X, y):
     clf = tree.DecisionTreeClassifier()
     clf = clf.fit(X_train, y_train)
 
-    y_pred = clf.predict(X_test)
-
-    return clf, y_test, y_pred
+    return clf, X_train, X_test, y_train, y_test
 
 def train_once(X, y):
-    clf, y_test, y_pred = train(X, y)
-    report_model(y_test, y_pred)
+    clf, X_train, X_test, y_train, y_test = train(X, y)
+    report_model(clf, X_train, X_test, y_train, y_test)
 
     tree.export_graphviz(clf, out_file='tree_is_fly.dot', feature_names=FEATURES,
                          class_names=CATEGORIES, filled=True, rounded=True, special_characters=True)
