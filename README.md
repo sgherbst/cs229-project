@@ -12,7 +12,7 @@ After cloning this repository, navigate to the top-level directory, create a new
 > pip install -e .
 ```
 
-If you choose a name other than **cs229-project**, please update the **PROJECT_NAME** variable in the toplevel Makefile accordingly.
+If you choose a name other than **cs229-project**, please update the **PROJECT_NAME** variable in the toplevel Makefile accordingly.  Similarly, if you are not using miniconda, please update the definition of the Makefile variable **CONDAROOT**.
 
 Then download the the [input directory](https://www.dropbox.com/sh/78inyvw2ouut74a/AACc1DYrC1G0UxujwT-6ryRKa?dl=0) (2 GB) and place it in the top-level directory.  This folder, containing two subfolders **images** and **video**, contains the raw and labeled data used for this project.
 
