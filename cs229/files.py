@@ -12,7 +12,7 @@ class CapProps:
     def t_ms(self):
         return int(round(1e3/self.fps))
 
-def get_dir(*args, mkdir_p=False):
+def get_dir(*args, mkdir_p=True):
     """
     Returns the absolute path to the relative directory specified by arg0, arg1, etc.
     """
