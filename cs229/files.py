@@ -1,11 +1,6 @@
 import os
 import os.path
-import pickle
 import cv2
-from tqdm import tqdm
-import datetime
-from glob import glob
-from itertools import chain
 
 class CapProps:
     def __init__(self, width, height, fps):
@@ -17,31 +12,36 @@ class CapProps:
     def t_ms(self):
         return int(round(1e3/self.fps))
 
-def get_annotation_files():
-    folders = ['12-04_17-54-43', '12-05-12-43-00', '12-07_16_45_00', '12-08_11-15-00', '12-08_22_00_00']
-    folders = [os.path.join(top_dir(), 'images', folder) for folder in folders]
+def get_dir(*args, mkdir_p=False):
+    """
+    Returns the absolute path to the relative directory specified by arg0, arg1, etc.
+    """
 
-    files = [glob(os.path.join(folder, '*.json')) for folder in folders]
-
-    return chain(*files)
-
-def top_dir():
     path_to_this_file = os.path.realpath(os.path.expanduser(__file__))
-    return os.path.dirname(os.path.dirname(path_to_this_file))
+    top_dir = os.path.dirname(os.path.dirname(path_to_this_file))
 
-def open_image(name=None):
-    if name is None:
-        name = 'test1'
+    # find path to directory
+    join_args = [top_dir] + [arg for arg in args]
+    path = os.path.join(*join_args)
 
-    file_path = os.path.join(top_dir(), 'images', name + '.png')
+    # make the directory if needed/desired
+    if mkdir_p:
+        os.makedirs(path, exist_ok=True)
 
-    return cv2.imread(file_path, 0)
+    # return the path
+    return path
 
-def open_video(name=None):
-    if name is None:
-        name = 'cropped'
+def get_file(*args, mkdir_p=False):
+    # get path to the directory (and make directory if needed/desired)
+    dir = get_dir(*args[:-1], mkdir_p=mkdir_p)
 
-    file_path = os.path.join(top_dir(), 'video', name + '.mp4')
+    # construct the path to the file
+    path = os.path.join(dir, args[-1])
+
+    return path
+
+def read_video(name):
+    file_path = get_file('input', 'videos', name)
 
     cap = cv2.VideoCapture(file_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -52,24 +52,10 @@ def open_video(name=None):
 
     return cap, props
 
-def image_folder(name=None):
-    if name is None:
-        name = datetime.datetime.now().strftime('%m-%d_%H-%M-%S')
+def write_video(name, props):
+    file_path = get_file('output', 'videos', name)
 
-    path = os.path.join(top_dir(), 'images', name)
-    os.makedirs(path)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    writer = cv2.VideoWriter(file_path, fourcc, props.fps, (props.width, props.height))
 
-    return path
-
-def pickle_path(name):
-    return os.path.join(top_dir(), 'pickles', name+'.p')
-
-def write_pickle(name, data):
-    pickle.dump(data, open(pickle_path(name), 'wb'))
-
-def read_pickle(name):
-    return pickle.load(open(pickle_path(name), 'rb'))
-
-def fast_forward(cap, frames):
-    for _ in tqdm(range(frames)):
-        cap.read()
+    return writer

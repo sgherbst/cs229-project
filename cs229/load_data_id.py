@@ -1,13 +1,13 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-from cs229.files import get_annotation_files
-from cs229.annotation import Annotation
+from cs229.annotation import get_annotations
 from cs229.image import img_to_mask
-from cs229.contour import contour_label, find_core_contours
+from cs229.contour import contour_label, find_contours
 from cs229.patch import crop_to_contour
-from cs229.util import report_labels
+from cs229.util import report_labels_classification
+from cs229.files import get_file
 
 import joblib
 
@@ -41,12 +41,11 @@ def load_data():
 
     img_count = 0
 
-    for f in get_annotation_files():
-        anno = Annotation(f)
+    for anno in tqdm(get_annotations()):
         img = cv2.imread(anno.image_path, 0)
 
         mask = img_to_mask(img)
-        contours = find_core_contours(img, mask=mask)
+        contours = find_contours(img, mask=mask, type='core')
 
         male = None
         female = None
@@ -89,15 +88,15 @@ def load_data():
     y = np.array(y, dtype=int)
 
     print('Used {} annotated images.'.format(img_count))
-    report_labels(CATEGORIES, y)
+    report_labels_classification(y, CATEGORIES)
 
     return X, y
 
 def main():
     X, y = load_data()
 
-    joblib.dump(X, X_JOBLIB_NAME)
-    joblib.dump(y, Y_JOBLIB_NAME)
+    joblib.dump(X, get_file('output', 'data', X_JOBLIB_NAME))
+    joblib.dump(y, get_file('output', 'data', Y_JOBLIB_NAME))
 
 if __name__ == '__main__':
     main()

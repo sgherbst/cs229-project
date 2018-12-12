@@ -1,12 +1,13 @@
 import cv2
 import numpy as np
+from argparse import ArgumentParser
 from time import perf_counter
 
 from cs229.display import open_window, show_image
-from cs229.files import open_video
+from cs229.files import read_video, write_video
 from cs229.image import img_to_mask, bound_point
-from cs229.contour import find_core_contours, in_contour
-from cs229.patch import crop_to_contour, mask_from_contour
+from cs229.contour import find_contours
+from cs229.patch import crop_to_contour
 from cs229.train_is_fly import IsFlyPredictor
 from cs229.train_id import IdPredictor
 from cs229.train_orientation import PosePredictor
@@ -20,16 +21,23 @@ def arrow_from_point(img, point, length, angle, color):
     tip = bound_point((ax, ay), img)
     cv2.arrowedLine(img, point, tip, color, 5, tipLength=0.3)
 
-def main(profile=False, write=True):
+def main():
+    # parse command-line arguments
+    parser = ArgumentParser()
+    parser.add_argument('--no_display', action='store_true')
+    parser.add_argument('--write_video', action='store_true')
+    parser.add_argument('-i', '--input', type=str, default='test4.mp4')
+    parser.add_argument('-o', '--output', type=str, default='output.avi')
+    args = parser.parse_args()
+
     # prepare video
-    cap, props = open_video('test4')
+    cap, props = read_video(args.input)
     _, img = cap.read()
     img = img[:, :, 0]
     mask = img_to_mask(img)
 
-    if write:
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        vid_out = cv2.VideoWriter('output.avi', fourcc, props.fps, (props.width, props.height))
+    if args.write_video:
+        video_writer = write_video(args.output, props)
 
     # load predictors
     is_fly_predictor = IsFlyPredictor()
@@ -38,7 +46,7 @@ def main(profile=False, write=True):
     wing_predictor = WingPredictor()
 
     # display-specific actions
-    if not profile:
+    if not args.no_display:
         open_window()
         colors = {'female': (255, 0, 0), 'male': (0, 0, 255), 'both': (255, 0, 255), 'neither': None}
 
@@ -47,6 +55,8 @@ def main(profile=False, write=True):
     prof = Profiler()
 
     while True:
+        frame_start = perf_counter()
+
         # read frame
         prof.tick('I/O')
         ok, img = cap.read()
@@ -55,7 +65,7 @@ def main(profile=False, write=True):
         if not ok:
             break
 
-        if not profile:
+        if not args.no_display:
             out = img.copy()
 
         img = img[:, :, 0]
@@ -64,7 +74,7 @@ def main(profile=False, write=True):
 
         # extract contours
         prof.tick('Find fly contours')
-        contours = find_core_contours(img, mask=mask)
+        contours = find_contours(img, mask=mask, type='core')
 
         # draw contours with a color associated with the class
         contours_by_label = {'neither': [], 'one': [], 'both': []}
@@ -128,7 +138,7 @@ def main(profile=False, write=True):
             continue
 
         # when profiling, skip the drawing steps
-        if profile:
+        if args.no_display:
             continue
 
         # illustrate the results
@@ -158,11 +168,17 @@ def main(profile=False, write=True):
         # display image
         show_image(out, downsamp=2)
 
-        if write:
-            vid_out.write(out)
+        if args.write_video:
+            video_writer.write(out)
+
+        # figure out how much extra time the GUI should wait before proceeding
+        t_frame_ms = 1e3*(perf_counter() - frame_start)
+        t_extra_ms = int(round(props.t_ms - t_frame_ms))
 
         # handle GUI tasks
-        key = cv2.waitKey(props.t_ms)
+        key = cv2.waitKey(max(t_extra_ms, 1))
+
+        # process input keys
         if key == ord('q'):
             break
 
@@ -170,8 +186,8 @@ def main(profile=False, write=True):
 
     prof.stop()
 
-    if write:
-        vid_out.release()
+    if args.write_video:
+        video_writer.release()
 
     print('Total frames: {}'.format(frames))
     print('Elapsed time: {}'.format(tock-tick))

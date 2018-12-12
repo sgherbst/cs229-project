@@ -1,5 +1,3 @@
-import os.path
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -8,8 +6,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.decomposition import PCA
 
-from cs229.files import top_dir
-from cs229.load_data_wing import make_hog_patch, make_hog, patch_to_features
+from cs229.files import get_file
+from cs229.load_data_wing import make_hog_patch, make_hog, patch_to_features, X_JOBLIB_NAME, Y_JOBLIB_NAME
 from cs229.util import report_model_regression
 
 import joblib
@@ -18,7 +16,7 @@ CLF_JOBLIB_NAME = 'clf_wing.joblib'
 
 class WingPredictor:
     def __init__(self):
-        self.clf = joblib.load(os.path.join(top_dir(), 'cs229', CLF_JOBLIB_NAME))
+        self.clf = joblib.load(get_file('output', 'models', CLF_JOBLIB_NAME))
         self.hog = make_hog()
 
     def predict(self, patch):
@@ -45,7 +43,7 @@ def plot_pca(X, y):
     plt.ylabel('Total explained variance ratio')
     plt.grid()
 
-    plt.savefig('pca_wing_explained.eps'.format(type), bbox_inches='tight')
+    plt.savefig(get_file('output', 'graphs', 'pca_wing_explained.eps'), bbox_inches='tight')
     plt.clf()
 
     # plot principal component vs angle
@@ -56,7 +54,7 @@ def plot_pca(X, y):
     plt.ylabel('Wing angle (deg)')
     plt.grid()
 
-    plt.savefig('pca_wing.eps'.format(type), bbox_inches='tight')
+    plt.savefig(get_file('output', 'graphs', 'pca_wing.eps'), bbox_inches='tight')
     plt.clf()
 
 def train(X, y, plot=False):
@@ -73,16 +71,15 @@ def train(X, y, plot=False):
 def train_once(X, y):
     clf, X_train, X_test, y_train, y_test = train(X, y, plot=True)
 
-    report_model_regression('radians', clf, X_train, X_test, y_train, y_test)
+    report_model_regression(clf, X_train, X_test, y_train, y_test, units='radians')
 
-    joblib.dump(clf, CLF_JOBLIB_NAME)
+    joblib.dump(clf, get_file('output', 'models', CLF_JOBLIB_NAME))
 
 def main():
-    X = joblib.load('X_wing.joblib')
-    y = joblib.load('y_wing.joblib')
+    X = joblib.load(get_file('output', 'data', X_JOBLIB_NAME))
+    y = joblib.load(get_file('output', 'data', Y_JOBLIB_NAME))
 
     train_once(X, y)
-    #train_experiment_regression(lambda: train(X, y), 'degrees')
 
 if __name__ == '__main__':
     main()

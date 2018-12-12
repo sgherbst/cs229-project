@@ -10,3 +10,6 @@ __pycache__
 *.dot
 *.eps
 *.png
+input/
+output/
+experiments/

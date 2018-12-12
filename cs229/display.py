@@ -18,6 +18,7 @@ class MouseData:
             self.x = x
             self.y = y
 
+    @property
     def last_click(self):
         try:
             return self.clicks[-1]

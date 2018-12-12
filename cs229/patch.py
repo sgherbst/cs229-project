@@ -1,16 +1,19 @@
 import cv2
-import os
-import os.path
 import matplotlib.pyplot as plt
 import numpy as np
 import imutils
 
-from cs229.files import top_dir
-from cs229.image import img_to_mask, bound_point
-from cs229.contour import find_core_contours
 from math import degrees
 
+from cs229.image import img_to_mask, bound_point
+from cs229.contour import find_contours, contour_roi, largest_contour
+from cs229.annotation import get_annotations
+
 def mask_from_contour(img, contour, color='white'):
+    """
+    Returns a mask (binary image) selecting only the interior of the contour.
+    """
+
     if color == 'white':
         start_mask = np.zeros(img.shape, dtype=np.uint8)
         contour_color = 255
@@ -25,36 +28,45 @@ def mask_from_contour(img, contour, color='white'):
     return start_mask
 
 def crop_to_contour(img, contour):
+    """
+    Returns an ImagePatch containing only the given contour.
+    """
+
     # create a mask of the contour
     mask = mask_from_contour(img, contour)
 
-    # get bounding box coordinates
-    ymin = np.min(contour[:, 0, 1])
-    ymax = np.max(contour[:, 0, 1])
-    xmin = np.min(contour[:, 0, 0])
-    xmax = np.max(contour[:, 0, 0])
-
-    # crop to window
-    window = (slice(ymin, ymax+1), slice(xmin, xmax+1))
-    img = img[window]
-    mask = mask[window]
+    # crop to ROI
+    roi = contour_roi(contour)
+    img = img[roi]
+    mask = mask[roi]
 
     # apply mask
     img = cv2.bitwise_and(img, img, mask=mask)
 
-    return ImagePatch(img=img, mask=mask, ulx=xmin, uly=ymin)
+    return ImagePatch(img=img, mask=mask, ulx=roi[1].start, uly=roi[0].start)
 
 def moments_to_angle(moments):
+    """
+    Converts OpenCV moments to an angle estimate.  the estimate does have an front/back ambiguity.
+    """
+
+    # ref: https://en.wikipedia.org/wiki/Image_moment
+    # ref: http://raphael.candelier.fr/?blog=Image%20Moments
     angle = 0.5 * np.arctan(2 * moments['mu11'] / (moments['mu20'] - moments['mu02']))
 
     if moments['mu20'] < moments['mu02']:
         angle += np.pi / 2
 
+    # negate angle so that increasing angle corresponds to counter-clockwise rotation
     angle = -angle
 
     return angle
 
 def moments_to_center(moments):
+    """
+    Returns an estimate of the center-of-mass from the image moments.  Note that this is a floating-point value.
+    """
+
     x_bar = moments['m10']/moments['m00']
     y_bar = moments['m01']/moments['m00']
 
@@ -89,16 +101,6 @@ class ImagePatch:
 
         return ImagePatch(img, mask)
 
-    def translate(self, x, y):
-        img = imutils.translate(self.img, x, y)
-
-        if self.mask is not None:
-            mask = imutils.translate(self.mask, x, y)
-        else:
-            mask = None
-
-        return ImagePatch(img, mask)
-
     def rotate180(self):
         return self.rotate(np.pi)
 
@@ -120,6 +122,7 @@ class ImagePatch:
         mu_prime_02 = self.moments['mu02']/self.moments['m00']
         mu_prime_11 = self.moments['mu11']/self.moments['m00']
 
+        # compute major and minor axes
         MA = np.sqrt(6*(mu_prime_20+mu_prime_02+np.sqrt(4*(mu_prime_11**2)+(mu_prime_20-mu_prime_02)**2)))
         ma = np.sqrt(6*(mu_prime_20+mu_prime_02-np.sqrt(4*(mu_prime_11**2)+(mu_prime_20-mu_prime_02)**2)))
 
@@ -142,17 +145,6 @@ class ImagePatch:
             raise Exception('Invalid orientation.')
 
         return self.rotate(rotate_angle)
-
-    def add_noise(self, amount):
-        # add noise to the whole image
-        img = self.img.astype(float) + np.random.uniform(-amount, +amount, size=self.img.shape)
-        img = np.clip(img, 0, 255).astype(np.uint8)
-
-        # apply mask
-        if self.mask is not None:
-            img = cv2.bitwise_and(img, img, mask=self.mask)
-
-        return ImagePatch(img=img, mask=self.mask)
 
     def recenter(self, new_width, new_height, old_center=None):
         # define center of original patch
@@ -223,16 +215,19 @@ class ImagePatch:
         return ImagePatch(img=img, mask=mask)
 
 def main():
+    # get first annotation
+    anno = next(get_annotations())
+    image_path = anno.image_path
+
     # read the image
-    image_path = os.path.join(top_dir(), 'images', '12-01_10-41-12', '12.bmp')
     img = cv2.imread(image_path, 0)
 
     # extract contours
     mask = img_to_mask(img)
-    contours = find_core_contours(img, mask=mask)
+    contours = find_contours(img, mask=mask, type='core')
 
     # pick out the largest contour
-    contour = max(contours, key=lambda x: cv2.contourArea(x))
+    contour = largest_contour(contours)
 
     # crop and rotate
     patch = crop_to_contour(img, contour)

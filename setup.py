@@ -9,10 +9,16 @@ setup(
     author_email='sherbst@stanford.edu',
     packages=['cs229'],
     install_requires=[
-        'scipy',
+        'joblib',
+        'imutils',
+        'matplotlib',
+        'tqdm',
         'numpy',
-        'tqdm'
+        'scikit_learn',
+        'opencv-python'
     ],
     include_package_data=True,
     zip_safe=False,
 )
+
+

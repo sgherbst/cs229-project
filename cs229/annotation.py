@@ -1,12 +1,18 @@
 import json
 import numpy as np
-from glob import glob
 import os
 import os.path
+from glob import glob
+from itertools import chain
 
-from cs229.files import top_dir, get_annotation_files
+from cs229.files import get_dir
 
 def project(a, b, c):
+    """
+    Project (c-a) onto (b-a) and return the projection coefficient.  If this coefficient is between 0 and 1, then
+    c can be interpreted as being between a and b (even though it may not lie directly on the line between them)
+    """
+
     # make numpy arrays of the three points
     a = np.array(a).astype(float)
     b = np.array(b).astype(float)
@@ -137,9 +143,25 @@ class Annotation:
     def warn(self, msg):
         print('{}: {}'.format(self.image_path, msg))
 
+
+def get_annotations():
+    """
+    Returns an iterator over all annotation files in the subdirectories of input/images
+    """
+
+    # get subfolders of input/images directory
+    # ref: https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
+    subfolders = [f.path for f in os.scandir(get_dir('input', 'images')) if f.is_dir()]
+
+    # get all JSON files from subfolders
+    files = [glob(os.path.join(subfolder, '*.json')) for subfolder in subfolders]
+
+    return (Annotation(f) for f in chain(*files))
+
+
 def main():
-    for file in get_annotation_files():
-        Annotation(file)
+    for anno in get_annotations():
+        pass
 
 if __name__ == '__main__':
     main()

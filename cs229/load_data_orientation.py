@@ -1,17 +1,20 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+import joblib
 
 from math import degrees
+from tqdm import tqdm
 
-from cs229.files import get_annotation_files
-from cs229.annotation import Annotation
-from cs229.contour import find_core_contours
+from cs229.files import get_file
+from cs229.annotation import get_annotations
+from cs229.contour import find_contours
 from cs229.image import img_to_mask
 from cs229.patch import crop_to_contour
 from cs229.contour import contour_label
-from cs229.util import angle_diff, report_labels
-import joblib
+from cs229.util import angle_diff, report_labels_classification
+
+X_JOBLIB_NAME = 'X_orient.joblib'
+Y_JOBLIB_NAME = 'y_orient.joblib'
 
 CATEGORIES = ['normal', 'flipped']
 
@@ -23,15 +26,13 @@ def make_hog_patch(patch):
     return patch
 
 def make_hog():
-    # winSize = (64, 128)
-    # blockSize = (16, 16)
-    # blockStride = (8, 8)
-    # cellSize = (8, 8)
-    # nbins = 9
-    #
-    # hog = cv2.HOGDescriptor(winSize, blockSize, blockStride, cellSize, nbins)
+    winSize = (64, 128)
+    blockSize = (16, 16)
+    blockStride = (8, 8)
+    cellSize = (8, 8)
+    nbins = 9
 
-    hog = cv2.HOGDescriptor()
+    hog = cv2.HOGDescriptor(winSize, blockSize, blockStride, cellSize, nbins)
 
     return hog
 
@@ -47,15 +48,14 @@ def load_data(tol_radians=0.1):
     img_count = 0
     hand_labeled_count = 0
 
-    for f in get_annotation_files():
+    for anno in tqdm(get_annotations()):
         # keep track of whether any data is actually used from this file
         used_file = False
 
-        anno = Annotation(f)
         img = cv2.imread(anno.image_path, 0)
 
         mask = img_to_mask(img)
-        contours = find_core_contours(img, mask=mask)
+        contours = find_contours(img, mask=mask, type='core')
 
         for contour in contours:
             type = contour_label(anno, contour)
@@ -120,19 +120,19 @@ def load_data(tol_radians=0.1):
     print()
 
     print('Male classifier:')
-    report_labels(CATEGORIES, y['male'])
+    report_labels_classification(y['male'], CATEGORIES)
     print()
 
     print('Female classifier:')
-    report_labels(CATEGORIES, y['female'])
+    report_labels_classification(y['female'], CATEGORIES)
 
     return X, y
 
 def main():
     X, y = load_data()
 
-    joblib.dump(X, 'X_orient.joblib')
-    joblib.dump(y, 'y_orient.joblib')
+    joblib.dump(X, get_file('output', 'data', X_JOBLIB_NAME))
+    joblib.dump(y, get_file('output', 'data', Y_JOBLIB_NAME))
 
 if __name__ == '__main__':
     main()

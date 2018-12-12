@@ -1,5 +1,3 @@
-import os.path
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -8,9 +6,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.decomposition import PCA
 
-from cs229.files import top_dir
-from cs229.load_data_orientation import CATEGORIES, make_hog_patch, make_hog, patch_to_features
-from cs229.util import report_model
+from cs229.files import get_file
+from cs229.load_data_orientation import (CATEGORIES, make_hog_patch, make_hog, patch_to_features,
+                                         X_JOBLIB_NAME, Y_JOBLIB_NAME)
+from cs229.util import report_model_classification
 
 import joblib
 
@@ -19,7 +18,7 @@ def clf_joblib_name(type):
 
 class PosePredictor:
     def __init__(self, type):
-        self.clf = joblib.load(os.path.join(top_dir(), 'cs229', clf_joblib_name(type)))
+        self.clf = joblib.load(get_file('output', 'models', clf_joblib_name(type)))
         self.hog = make_hog()
 
     def predict(self, patch):
@@ -57,7 +56,7 @@ def plot_pca(X, y, type):
     plt.ylabel('Total explained variance ratio')
     plt.grid()
 
-    plt.savefig('pca_orient_{}_explained.eps'.format(type), bbox_inches='tight')
+    plt.savefig(get_file('output', 'graphs', 'pca_orient_{}_explained.eps'.format(type)), bbox_inches='tight')
     plt.clf()
 
     # show how data are separated by first two principal components
@@ -71,7 +70,7 @@ def plot_pca(X, y, type):
     plt.ylabel('PCA 2')
     plt.grid()
 
-    plt.savefig('pca_orient_{}.eps'.format(type), bbox_inches='tight')
+    plt.savefig(get_file('output', 'graphs', 'pca_orient_{}.eps'.format(type)), bbox_inches='tight')
     plt.clf()
 
 def train(X, y, type, plot=False):
@@ -88,18 +87,17 @@ def train(X, y, type, plot=False):
 
 def train_once(X, y, type):
     clf, X_train, X_test, y_train, y_test = train(X, y, type, plot=True)
-    report_model(clf, X_train, X_test, y_train, y_test)
+    report_model_classification(clf, X_train, X_test, y_train, y_test)
 
-    joblib.dump(clf, clf_joblib_name(type))
+    joblib.dump(clf, get_file('output', 'models', clf_joblib_name(type)))
 
 def main():
-    X = joblib.load('X_orient.joblib')
-    y = joblib.load('y_orient.joblib')
+    X = joblib.load(get_file('output', 'data', X_JOBLIB_NAME))
+    y = joblib.load(get_file('output', 'data', Y_JOBLIB_NAME))
 
     for type in ['male', 'female']:
         print('{} fly orientation detector...'.format(type.capitalize()))
         train_once(X, y, type)
-        #train_experiment(lambda: train(X, y, type))
 
 if __name__ == '__main__':
     main()

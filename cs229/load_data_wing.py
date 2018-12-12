@@ -3,17 +3,21 @@ DEBUG = False
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import joblib
 
 from math import degrees
+from tqdm import tqdm
 
-from cs229.files import get_annotation_files
-from cs229.annotation import Annotation
-from cs229.contour import find_core_contours, find_wing_contours, in_contour
+from cs229.files import get_file
+from cs229.annotation import get_annotations
+from cs229.contour import find_contours, in_contour
 from cs229.image import img_to_mask, bound_point
 from cs229.patch import crop_to_contour, ImagePatch, mask_from_contour
 from cs229.contour import contour_label
 from cs229.util import angle_diff, report_labels_regression
-import joblib
+
+X_JOBLIB_NAME = 'X_wing.joblib'
+Y_JOBLIB_NAME = 'y_wing.joblib'
 
 def get_rotation_matrix(theta):
     # ref: https://scipython.com/book/chapter-6-numpy/examples/creating-a-rotation-matrix-in-numpy/
@@ -29,7 +33,7 @@ def male_fly_patch(img, mask, body_center, rotate_angle, crop_size=400):
     fly_patch = fly_patch.recenter(crop_size, crop_size, body_center)
 
     # extract contours of the patch
-    contours = find_wing_contours(fly_patch.img, fly_patch.mask)
+    contours = find_contours(fly_patch.img, fly_patch.mask, type='wings')
 
     # mask out everything except the contour containing the fly
     fly_center = (crop_size//2, crop_size//2)
@@ -87,12 +91,11 @@ def load_data(tol_radians=0.1):
     img_count = 0
     hand_labeled_count = 0
 
-    for f in get_annotation_files():
-        anno = Annotation(f)
+    for anno in tqdm(get_annotations()):
         img = cv2.imread(anno.image_path, 0)
 
         mask = img_to_mask(img)
-        contours = find_core_contours(img, mask=mask)
+        contours = find_contours(img, mask=mask, type='core')
 
         for contour in contours:
             type = contour_label(anno, contour)
@@ -186,15 +189,18 @@ def load_data(tol_radians=0.1):
 
     print('Used {} annotated images.'.format(img_count))
     print('Used {} hand-labeled wings.'.format(hand_labeled_count))
-    report_labels_regression(np.degrees(y), 'Wing angle (degrees)', 'labels_wing.eps')
+
+    report_labels_regression(np.degrees(y),
+                             filename=get_file('output', 'graphs', 'labels_wing.eps'),
+                             units='Wing Angle (degrees)')
 
     return X, y
 
 def main():
     X, y = load_data()
 
-    joblib.dump(X, 'X_wing.joblib')
-    joblib.dump(y, 'y_wing.joblib')
+    joblib.dump(X, get_file('output', 'data', X_JOBLIB_NAME))
+    joblib.dump(y, get_file('output', 'data', Y_JOBLIB_NAME))
 
 if __name__ == '__main__':
     main()
