@@ -18,9 +18,13 @@ Then download the the [input directory](https://www.dropbox.com/sh/78inyvw2ouut7
 
 # Running the examples
 
-In the top-level directory, you can train the all four models used as part of the image processing pipeline by simply running **make**.  This should take about a minute.
+In the top-level directory, you can train the all four models used as part of the image processing pipeline by simply running 
 
-After the models are trained, you can view the video processing in realtime by running
+```shell
+> make
+```
+
+This should take about a minute.  After the models are trained, you can view the video processing in realtime by running
 
 ```shell
 > make demo
